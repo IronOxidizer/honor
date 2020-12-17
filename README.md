@@ -1,5 +1,5 @@
 # Honor
-A fast and stable League of Legends client built on Rust 
+A fast and stable League of Legends client built with Rust 
 
 *"Honor is the **Rust** on a dull blade"* ~ Sivir
 
