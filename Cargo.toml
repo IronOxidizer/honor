@@ -1,0 +1,23 @@
+[package]
+name = "honor"
+version = "0.1.0"
+authors = ["Iron Oxidizer"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+lazy_static = "1.4.0"
+anyhow = "1.0.35"
+app_dirs = "1.2.1"
+regex = "1.4.2"
+serde = { version = "1.0.118", features = ["derive"] }
+serde_json = "1.0.59"
+base64 = "0.13.0"
+
+futures = "0.3.8"
+async-std = { version = "1.8.0"}
+async-native-tls = "0.3.3"
+async-tungstenite = { version = "0.10", features = ["async-std-runtime", "async-native-tls"]}
+
+druid = { version = "0.6", default-features = false }
