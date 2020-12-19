@@ -6,12 +6,10 @@ A fast and stable League of Legends client built on Rust
 Built with:
 - rust
 - druid
-- tungstenite / async-tungstenite
+- async-tungstenite
 
 On launch
 - Call riotclient_killux
-- If not connected, try to connect
-- If can't connect try to relaunch
 
 - try request
 - if fail, return err result
@@ -21,6 +19,19 @@ On launch
 - if LCU is not running, return err result
 - prompt modal, highlight Restart LCU
 
-| Reconnect | Restart LCU | Exit Honor |
+| Reconnect LCU | Restart LCU |
 
 - Upon sucessful restart, automatically try to reconnect
+
+- On first occurence,
+    - don't prompt user, do it automatically for automatic connecting on first launch
+    - kill ux
+
+https://127.0.0.1:50473/lol-summoner/v1/current-summoner
+
+
+Consider auto reconnect on modal and only have one button to restart LCU, highlight button when LCU is not running and add "(recommended)" above it.
+
+Use async rwlock over mutex
+
+If waiting for response, set cursor to spinner?
