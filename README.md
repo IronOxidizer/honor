@@ -35,3 +35,5 @@ Consider auto reconnect on modal and only have one button to restart LCU, highli
 Use async rwlock over mutex
 
 If waiting for response, set cursor to spinner?
+
+Honor isn't endorsed by Riot Games and doesn't reflect the views or opinions of Riot Games or anyone officially involved in producing or managing Riot Games properties. Riot Games, and all associated properties are trademarks or registered trademarks of Riot Games, Inc.
