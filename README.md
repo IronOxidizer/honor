@@ -36,6 +36,10 @@ Use async rwlock over mutex
 
 If waiting for response, set cursor to spinner?
 
+## Legal
+
+Honor is licensed under AGPLv3+
+
 Honor isn't endorsed by Riot Games and doesn't reflect the views or opinions of Riot Games or anyone officially involved in producing or managing Riot Games properties. Riot Games, and all associated properties are trademarks or registered trademarks of Riot Games, Inc.
 
 Honor was created under Riot Games' "Legal Jibber Jabber" policy using assets owned by Riot Games.  Riot Games does not endorse or sponsor this project.
