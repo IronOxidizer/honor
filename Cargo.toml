@@ -21,4 +21,4 @@ tokio = { version = "0.2", features = ["full"]}
 tokio-native-tls = "0.2.0"
 async-tungstenite = { version = "0.10", features = ["tokio-runtime", "tokio-native-tls"]}
 
-druid = { git = "https://github.com/linebender/druid", default-features = false }
+druid = { git = "https://github.com/linebender/druid", features = ["im"] }

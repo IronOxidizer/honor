@@ -10,27 +10,47 @@ use serde_json;
 use anyhow::Result;
 use serde::{Deserialize, de::DeserializeOwned};
 use reqwest::Url;
-use druid::{Data, Lens};
+use druid::{Data, Lens, ExtEventSink};
 use regex::Regex;
 use base64;
 use app_dirs::{data_root, AppDataType};
 
-// Might have to use arc mutex/rwlock to pass around to threads in async
+use super::lcu_api::*;
+use super::views::AppView;
+
+// Everything in an Rc up to the scope of which the data is accquired / changing
+// When using Vector, Arc is not needed
 #[derive(Clone, Data, Lens)]
-pub struct ConnectionData {
-    // Put on a seperate thread wrapped in Arc<Mutex<>>
-    // Call to it using crossbeam_channel::unbounded
-    // Dispatch response as a druid::Command using ExtEventSink.
+pub struct AppState {
+    pub event_sink: Arc<ExtEventSink>,
+    pub connection: Connection,
+    pub view: AppView,
+    pub current_summoner: Arc<lol_summoner::Summoner>,
+    pub queues: lol_game_queues::Queues
+}
+
+impl AppState {
+    pub fn new(event_sink: Arc<ExtEventSink>, connection: Connection) -> Self {
+        Self {
+            event_sink: event_sink,
+            connection: connection,
+            view: Default::default(),
+            current_summoner: Default::default(),
+            queues: Default::default()
+        }
+    }
+}
+
+#[derive(Clone, Data, Lens)]
+pub struct Connection {
     pub client: Arc<reqwest::Client>,
-    // Actually preferable to use an Arc<RwLock<>> instead of mut ref + clone, but it's not in futures and 
-    //      futures_locks uses a built-in Arc that isn't compatible with Druid::Data
     pub port: u16,
     pub token: String
 }
 
-pub fn get_connection_data() -> Result<ConnectionData> {
+pub fn get_connection_data() -> Result<Connection> {
     let (port, token) = get_lcu_info()?;
-    Ok(ConnectionData {
+    Ok(Connection {
         // Consider adding the cert using client.add_root_certificate(cert) 
         // Get cert from here: https://www.hextechdocs.dev/lol/lcuapi/6.getting-started-with-the-lcu-api#performing-our-first-request
         client: Arc::new(reqwest::Client::builder().danger_accept_invalid_certs(true)
@@ -80,7 +100,6 @@ pub fn get_lcu_info() -> Result<(u16, String)> {
     }
 }
 
-
 // TODO: Use lazy static, this shouldn't change
 fn get_riot_client_path() -> Result<PathBuf> {
     #[derive(Deserialize)]
@@ -127,12 +146,18 @@ pub fn run_lcu() -> Result<()> {
 
 // Returns a generic that implements Deserialize
 // Reuse client everywhere for higher perofrmance. reqwest::get creates a new client each time which is slow
-pub async fn get_request<T>(connection_data: ConnectionData, endpoint: &str) -> Result<T> 
+pub async fn get_request<T>(connection: Connection, endpoint: &str) -> Result<T> 
 where T: DeserializeOwned {
+    let url = Url::parse(format!("https://{}:{}/{}", super::HOST, connection.port, endpoint).as_str())?;
 
-    let url = Url::parse(format!("https://{}:{}/{}", super::HOST, connection_data.port, endpoint).as_str())?;
+    // eprintln!("Request: {:?}\n\n", url.clone());
+    // let res = connection_data.client.get(url)
+    //     .header("authorization", connection_data.token)
+    //     .send().await?;
+    // println!("Response: {:?}", res.text().await?);
+    // todo!()
 
-    Ok(connection_data.client.get(url)
-        .header("authorization", connection_data.token)
+    Ok(connection.client.get(url)
+        .header("authorization", connection.token)
         .send().await?.json().await?)
 }

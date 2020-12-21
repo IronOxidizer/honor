@@ -3,18 +3,25 @@ use druid::{ExtEventSink, Selector, Target, SingleUse};
 use anyhow::Result;
 
 use super::util::*;
-use super::lcu_api;
+use super::lcu_api::*;
 
-// Consider changing to set_summoner, don't make single use and update multiple values / event handlers
-//      with a single update
-
-pub const SET_SUMMONER_NAME: Selector<SingleUse<String>> = Selector::new("event-example.set-color");
-
-pub async fn update_summoner_name(connection_data: ConnectionData, event_sink: Arc<ExtEventSink>) -> Result<()> {
-    let current_summoner = lcu_api::lol_summoner::current_summoner(connection_data).await?;
+// These are all very similar, maybe make generic and only require endpoint.
+pub const SET_CURRENT_SUMMONER: Selector<SingleUse<lol_summoner::Summoner>> = Selector::new("SET_CURRENT_SUMMONER");
+pub async fn update_current_summoner(event_sink: Arc<ExtEventSink>, connection_data: Connection) -> Result<()> {
+    let current_summoner = lol_summoner::current_summoner(connection_data).await?;
     event_sink.submit_command(
-        SET_SUMMONER_NAME,
-        SingleUse::new(current_summoner.displayName),
+        SET_CURRENT_SUMMONER,
+        SingleUse::new(current_summoner),
+        Target::Auto)?;
+    Ok(())
+}
+
+pub const SET_QUEUES: Selector<SingleUse<lol_game_queues::Queues>> = Selector::new("SET_QUEUES");
+pub async fn update_queues(event_sink: Arc<ExtEventSink>, connection_data: Connection) -> Result<()> {
+    let queues = lol_game_queues::queues(connection_data).await?;
+    event_sink.submit_command(
+        SET_QUEUES,
+        SingleUse::new(queues),
         Target::Auto)?;
     Ok(())
 }
