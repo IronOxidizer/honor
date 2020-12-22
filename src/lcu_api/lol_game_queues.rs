@@ -105,9 +105,14 @@ pub async fn queues(connection_data: Connection) -> Result<Queues> {
     available.sort_by(|a, b| a.description.cmp(&b.description));
     let avail_iter = available.into_iter();
 
-    let ranked = avail_iter.clone().filter_map(|q| if q.isRanked {Some(q.to_data())} else {None}).collect();
-    let versus_ai = avail_iter.clone().filter_map(|q| if q.category == "VersusAi" {Some(q.to_data())} else {None}).collect();
-    let casual = avail_iter.filter_map(|q| if !q.isRanked && q.category != "VersusAi" {Some(q.to_data())} else {None}).collect();
+    let ranked = avail_iter.clone()
+        .filter_map(|q| if q.isRanked && !q.description.contains("Clash") {Some(q.to_data())} else {None}).collect();
+    let versus_ai = avail_iter.clone()
+        .filter_map(|q| if q.category == "VersusAi" || q.description.contains("Tutorial")
+        {Some(q.to_data())} else {None}).collect();
+    let casual = avail_iter
+        .filter_map(|q| if !q.isRanked && q.category != "VersusAi" && !q.description.contains("Tutorial")
+        {Some(q.to_data())} else {None}).collect();
 
     Ok(Queues {
         ranked: ranked,

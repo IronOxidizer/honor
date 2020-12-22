@@ -2,17 +2,18 @@
 extern crate lazy_static;
 
 use std::sync::Arc;
-use druid::{AppLauncher, Widget, WidgetExt, WindowDesc, Color, Env, EventCtx, Event,
-    widget::{Flex, Label, Controller, MainAxisAlignment, CrossAxisAlignment}};
+use druid::{AppLauncher, Widget, WidgetExt, WindowDesc, Env, EventCtx, Event, widget::Controller};
 
 mod lcu_api;
 mod util;
 mod event_handlers;
 mod views;
 
+
 use util::*;
 use event_handlers::*;
 use views::app_view_switcher;
+use views::view_main;
 pub const HOST: &str = "127.0.0.1";
 
 #[tokio::main]
@@ -37,18 +38,29 @@ async fn main() {
 }
 
 fn build_root_widget() -> impl Widget<AppState> {
-    Flex::column()
-        .with_child(
-            Flex::row()
-                .with_child(Label::new("Top Bar"))
-                .with_flex_spacer(1.0)
-                .with_child(Label::new("o - x"))
-                .main_axis_alignment(MainAxisAlignment::SpaceBetween) // Maybe remove?
-                .cross_axis_alignment(CrossAxisAlignment::Center) // Maybe change to CrossAxis::Start
-                .border(Color::WHITE, 0.5))
-        .with_child(Flex::row()
-            .with_child(app_view_switcher())
-        ).controller(EventHandler)
+    // Top bar, not feasible until we can emulate drag to reposition window
+    // Flex::column()
+    // .with_child(
+    //     Flex::row()
+    //         .with_child(Label::new("Top Bar"))
+    //         .with_flex_spacer(1.0)
+    //         .with_child(Label::new("o - x"))
+    //         .main_axis_alignment(MainAxisAlignment::SpaceBetween) // Maybe remove?
+    //         .cross_axis_alignment(CrossAxisAlignment::Center) // Maybe change to CrossAxis::Start
+    //         .border(Color::WHITE, 0.5))
+    // .with_child(Flex::row()
+    //     .with_child(app_view_switcher())
+    // ).controller(EventHandler)
+
+    //app_view_switcher()
+    view_main()
+        .controller(EventHandler)
+    
+    // Tabs::new()
+    //     .with_axis(Axis::Vertical)
+    //     .with_tab("tab0", Label::new("This is tab0"))
+    //     .with_tab("tab1", Label::new("This is tab1"))
+    //     .with_tab("tab2", Label::new("This is tab2"))
 }
 
 struct EventHandler;
