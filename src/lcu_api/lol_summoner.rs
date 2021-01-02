@@ -1,7 +1,7 @@
 use anyhow::Result;
 use serde::Deserialize;
 use druid::{Data, Lens};
-
+use std::sync::Arc;
 use super::super::util::*;
 
 // Need to shadow _Summoner until Deserialize is implement for druid::im::Vector
@@ -46,7 +46,9 @@ struct _RerollPoints {
     pointsToReroll: u32
 }
 
-pub async fn current_summoner(connection: Connection) ->  Result<Summoner> {
-    Ok(get_request::<_Summoner>(connection, "lol-summoner/v1/current-summoner")
-        .await?.to_data())
+pub async fn current_summoner(connection: Connection) ->  Result<Arc<Summoner>> {
+    Ok(Arc::new(
+        get_request::<_Summoner>(connection, "lol-summoner/v1/current-summoner")
+            .await?.to_data()
+    ))
 }

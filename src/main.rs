@@ -73,16 +73,22 @@ impl<W: Widget<AppState>> Controller<AppState, W> for EventHandler {
                     
                 tokio::spawn(event_handlers::update_queues(
                     data.event_sink.clone(), data.connection.clone()));
+
+                tokio::spawn(event_handlers::update_friends(
+                    data.event_sink.clone(), data.connection.clone()));
                 
                 ()
             },
             Event::Command(cmd) => {
                 if cmd.is(SET_CURRENT_SUMMONER) {
                     if let Some(summoner) = cmd.get_unchecked(SET_CURRENT_SUMMONER).take()
-                        {data.current_summoner = Arc::new(summoner)}
+                        {data.current_summoner = summoner}
                 } else if cmd.is(SET_QUEUES) {
                     if let Some(queues) = cmd.get_unchecked(SET_QUEUES).take()
                         {data.queues = queues}
+                } else if cmd.is(SET_FRIENDS) {
+                    if let Some(friends) = cmd.get_unchecked(SET_FRIENDS).take()
+                        {data.friends = friends}
                 }
             },
             _ => ()

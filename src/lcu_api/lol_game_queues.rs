@@ -2,6 +2,7 @@ use anyhow::Result;
 use serde::Deserialize;
 use druid::{Data, Lens};
 use druid::im::Vector;
+use std::sync::Arc;
 
 use super::super::util::*;
 
@@ -12,7 +13,7 @@ pub struct Queues {
     pub versus_ai: Vector<Queue>
 }
 
-#[derive(Clone, Default, Debug, Data, Lens)]
+#[derive(Clone, Debug, Data, Lens)]
 pub struct Queue {
     pub description: String
 }
@@ -99,7 +100,7 @@ struct _QueueRewards {
     partySizeIpRewards: Vec<u32>
 }
 
-pub async fn queues(connection_data: Connection) -> Result<Queues> {
+pub async fn queues(connection_data: Connection) -> Result<Arc<Queues>> {
     let mut available = get_request::<Vec<_Queue>>(connection_data, "lol-game-queues/v1/queues").await?;
     available.retain(|q| q.queueAvailability == "Available");
     available.sort_by(|a, b| a.description.cmp(&b.description));
@@ -114,9 +115,9 @@ pub async fn queues(connection_data: Connection) -> Result<Queues> {
         .filter_map(|q| if !q.isRanked && q.category != "VersusAi" && !q.description.contains("Tutorial")
         {Some(q.to_data())} else {None}).collect();
 
-    Ok(Queues {
+    Ok(Arc::new(Queues {
         ranked: ranked,
         casual: casual,
         versus_ai: versus_ai
-    })
+    }))
 }

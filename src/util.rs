@@ -10,7 +10,7 @@ use serde_json;
 use anyhow::Result;
 use serde::{Deserialize, de::DeserializeOwned};
 use reqwest::Url;
-use druid::{Data, Lens, ExtEventSink};
+use druid::{Data, Lens, ExtEventSink, im::{Vector, HashMap}};
 use regex::Regex;
 use base64;
 use app_dirs::{data_root, AppDataType};
@@ -26,7 +26,10 @@ pub struct AppState {
     pub connection: Connection,
     pub view: AppView,
     pub current_summoner: Arc<lol_summoner::Summoner>,
-    pub queues: lol_game_queues::Queues
+    pub queues: Arc<lol_game_queues::Queues>, // Maybe queues should be a hashmap too
+    pub friends: Arc<lol_chat::Friends>,
+
+    pub chat_contents: String
 }
 
 impl AppState {
@@ -36,7 +39,9 @@ impl AppState {
             connection: connection,
             view: Default::default(),
             current_summoner: Default::default(),
-            queues: Default::default()
+            queues: Default::default(),
+            friends: Default::default(),
+            chat_contents: Default::default()
         }
     }
 }
@@ -151,8 +156,8 @@ where T: DeserializeOwned {
     let url = Url::parse(format!("https://{}:{}/{}", super::HOST, connection.port, endpoint).as_str())?;
 
     // eprintln!("Request: {:?}\n\n", url.clone());
-    // let res = connection_data.client.get(url)
-    //     .header("authorization", connection_data.token)
+    // let res = connection.client.get(url)
+    //     .header("authorization", connection.token)
     //     .send().await?;
     // println!("Response: {:?}", res.text().await?);
     // todo!()

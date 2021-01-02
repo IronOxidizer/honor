@@ -1,5 +1,6 @@
 pub mod riotclient;
 pub mod lol_summoner;
+pub mod lol_chat;
 pub mod lol_game_queues;
 
 // pub enum MessageType {

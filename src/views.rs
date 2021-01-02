@@ -1,5 +1,6 @@
-use druid::{Widget, WidgetExt, LensExt, Data, UnitPoint, Color,
-    widget::{Flex, Label, List, ViewSwitcher, Tabs, Axis, Button, Container, Scroll}};
+use app_dirs::AppDataType;
+use druid::{Widget, WidgetExt, LensExt, Data, UnitPoint, Color, Lens,
+    widget::{Flex, Label, List, ViewSwitcher, Tabs, Axis, Button, Container, Scroll, TextBox, CrossAxisAlignment}};
 
 use super::util::*;
 use super::lcu_api::*;
@@ -45,28 +46,22 @@ pub fn view_main() -> impl Widget<AppState> {
     }
 
     let ranked_list = List::new(|| {
-        Flex::row().with_child(
-            Label::new(|queue: &lol_game_queues::Queue, _env: &_| {
-               queue.description.clone()
-            })
-        )
-    }).lens(lol_game_queues::Queues::ranked);
+        Button::new(|queue: &lol_game_queues::Queue, _env: &_| {
+            queue.description.clone()
+        }).padding((0.0, 2.0))
+    }).lens(lol_game_queues::Queues::ranked.in_arc());
 
     let casual_list = List::new(|| {
-        Flex::row().with_child(
-            Label::new(|queue: &lol_game_queues::Queue, _env: &_| {
-               queue.description.clone()
-            })
-        )
-    }).lens(lol_game_queues::Queues::casual);
+        Button::new(|queue: &lol_game_queues::Queue, _env: &_| {
+            queue.description.clone()
+        }).padding((0.0, 2.0))
+    }).lens(lol_game_queues::Queues::casual.in_arc());
 
     let versus_ai_list = List::new(|| {
-        Flex::row().with_child(
-            Label::new(|queue: &lol_game_queues::Queue, _env: &_| {
-               queue.description.clone()
-            })
-        )
-    }).lens(lol_game_queues::Queues::versus_ai);
+        Button::new(|queue: &lol_game_queues::Queue, _env: &_| {
+            queue.description.clone()
+        }).padding((0.0, 2.0))
+    }).lens(lol_game_queues::Queues::versus_ai.in_arc());
 
     let queue_type_tabs = Tabs::new()
         .with_axis(Axis::Vertical)
@@ -76,20 +71,71 @@ pub fn view_main() -> impl Widget<AppState> {
         .lens(AppState::queues);
 
     let notification_scroll = Scroll::new(Label::new("notifications")).expand();
-    let start_cancel = Button::new("Start/Cancel");
-
+    let start_cancel = Button::new("Start/Cancel")
+        .expand_width()
+        .padding(2.0);
     let notif_start_cancel_col = Flex::column()
         .with_flex_child(notification_scroll, 1.0)
         .with_child(start_cancel);
 
-    let chat = Scroll::new(Label::new("chat")).expand();
 
-    let friends_list = Scroll::new(Label::new("friends list")).expand();
+    let chat_history = Scroll::new(Label::new("chat history")).expand();
+    let chat_input = TextBox::new()
+        .with_placeholder("Chat")
+        .expand_width()
+        .padding(2.0)
+        .lens(AppState::chat_contents);
+    let chat_col = Flex::column()
+        .with_flex_child(chat_history, 1.0)
+        .with_child(chat_input);
+
+    // Seperate into 3 rows, League (different background or text color depending on status),
+    //      Green = Online, Blue = In-Game/Queue, Red = Away 
+    //      Other Game / Mobile, Offline
+    let friends_list = Scroll::new(
+        Flex::column()
+            .with_child(Label::new("Online")
+                .center().expand_width())
+            .with_child(
+                List::new(|| {
+                    Label::new(|friend: &lol_chat::Friend, _env: &_| friend.name.clone())
+                        .with_text_color(Color::rgb8(32, 255, 32))
+                }).lens(lol_chat::Friends::online.in_arc()))
+            .with_child(
+                List::new(|| {
+                    Label::new(|friend: &lol_chat::Friend, _env: &_| friend.name.clone())
+                        .with_text_color(Color::rgb8(92, 92, 255))
+                }).lens(lol_chat::Friends::busy.in_arc()))
+            .with_child(
+                List::new(|| {
+                    Label::new(|friend: &lol_chat::Friend, _env: &_| friend.name.clone())
+                        .with_text_color(Color::rgb8(255, 32, 32))
+                }).lens(lol_chat::Friends::away.in_arc()))
+            .with_child(Label::new("Other")
+                .center().expand_width())
+            .with_child(
+                List::new(|| {
+                    Label::new(|friend: &lol_chat::Friend, _env: &_| friend.name.clone())
+                        .with_text_color(Color::rgb8(192, 192, 160))
+                }).lens(lol_chat::Friends::other.in_arc()))
+
+            .with_child(Label::new("Offline")
+                .center().expand_width())
+            .with_child(
+                List::new(|| {
+                    Label::new(|friend: &lol_chat::Friend, _env: &_| friend.name.clone())
+                        .with_text_color(Color::grey8(128))
+                }).lens(lol_chat::Friends::offline.in_arc()))
+            .cross_axis_alignment(CrossAxisAlignment::Start)
+            .lens(AppState::friends)
+    ).vertical()
+        .expand();
+    
 
     let top_row = Flex::row()
-        .with_flex_child(queue_type_tabs, 1.6)
+        .with_flex_child(queue_type_tabs, 2.0)
         .with_flex_child(notif_start_cancel_col, 1.0)
-        .with_flex_child(chat, 1.0)
+        .with_flex_child(chat_col, 1.0)
         .with_flex_child(friends_list, 1.0);//.debug_paint_layout();
 
     let summoner_cards = Scroll::new(
