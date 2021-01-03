@@ -1,6 +1,7 @@
 use app_dirs::AppDataType;
-use druid::{Widget, WidgetExt, LensExt, Data, UnitPoint, Color, Lens,
-    widget::{Flex, Label, List, ViewSwitcher, Tabs, Axis, Button, Container, Scroll, TextBox, CrossAxisAlignment}};
+use druid::{Color, Data, KeyOrValue, Lens, LensExt, RenderContext, UnitPoint, Widget, WidgetExt,
+    im::{Vector}, theme, widget::{Flex, Label, List, ViewSwitcher, Tabs, Axis, Button, Container, Scroll, TextBox,
+        Painter, CrossAxisAlignment, ListIter}};
 
 use super::util::*;
 use super::lcu_api::*;
@@ -45,29 +46,44 @@ pub fn view_main() -> impl Widget<AppState> {
             .padding((4.0, 8.0))
     }
 
-    let ranked_list = List::new(|| {
-        Button::new(|queue: &lol_game_queues::Queue, _env: &_| {
-            queue.description.clone()
-        }).padding((0.0, 2.0))
-    }).lens(lol_game_queues::Queues::ranked.in_arc());
+    fn queue_list() -> impl Widget<Vector<lol_game_queues::Queue>> {
+        List::new(|| {
+            Label::new(|queue: &lol_game_queues::Queue, _env: &_| {
+                queue.description.clone()
+            }).background(Painter::new(|ctx, _, env| {
+                let bounds = ctx.size().to_rect();
+                if ctx.is_active() {
+                    ctx.fill(bounds, &Color::rgb8(32, 32, 32));
+                } else if ctx.is_hot() {
+                    ctx.fill(bounds, &Color::rgb8(64, 64, 64))
+                }
+            })).on_click(move |_ctx, data, _env| eprintln!("{:?}", data))
+            .expand_width()
+        })
+    }
 
-    let casual_list = List::new(|| {
-        Button::new(|queue: &lol_game_queues::Queue, _env: &_| {
-            queue.description.clone()
-        }).padding((0.0, 2.0))
-    }).lens(lol_game_queues::Queues::casual.in_arc());
-
-    let versus_ai_list = List::new(|| {
-        Button::new(|queue: &lol_game_queues::Queue, _env: &_| {
-            queue.description.clone()
-        }).padding((0.0, 2.0))
-    }).lens(lol_game_queues::Queues::versus_ai.in_arc());
+    fn friend_status_group(color: impl Into<KeyOrValue<Color>> + Clone + 'static) -> impl Widget<Vector<lol_chat::Friend>> {
+        List::new(move || {
+            Label::new(|friend: &lol_chat::Friend, _env: &_| friend.name.clone())
+                .with_text_color(color.clone())
+                .background(Painter::new(|ctx, _, env| {
+                    let bounds = ctx.size().to_rect();
+                    if ctx.is_active() {
+                        ctx.fill(bounds, &Color::rgb8(32, 32, 32));
+                    } else if ctx.is_hot() {
+                        ctx.fill(bounds, &Color::rgb8(64, 64, 64))
+                    }
+                }))
+                .on_click(move |_ctx, data, _env| eprintln!("{:?}", data))
+                .expand_width()
+        })
+    }
 
     let queue_type_tabs = Tabs::new()
         .with_axis(Axis::Vertical)
-        .with_tab("Ranked", ranked_list)
-        .with_tab("Casual", casual_list)
-        .with_tab("Versus AI", versus_ai_list)
+        .with_tab("Ranked", queue_list().lens(lol_game_queues::Queues::ranked.in_arc()))
+        .with_tab("Casual", queue_list().lens(lol_game_queues::Queues::casual.in_arc()))
+        .with_tab("Versus AI", queue_list().lens(lol_game_queues::Queues::versus_ai.in_arc()))
         .lens(AppState::queues);
 
     let notification_scroll = Scroll::new(Label::new("notifications")).expand();
@@ -96,36 +112,23 @@ pub fn view_main() -> impl Widget<AppState> {
         Flex::column()
             .with_child(Label::new("Online")
                 .center().expand_width())
-            .with_child(
-                List::new(|| {
-                    Label::new(|friend: &lol_chat::Friend, _env: &_| friend.name.clone())
-                        .with_text_color(Color::rgb8(32, 255, 32))
-                }).lens(lol_chat::Friends::online.in_arc()))
-            .with_child(
-                List::new(|| {
-                    Label::new(|friend: &lol_chat::Friend, _env: &_| friend.name.clone())
-                        .with_text_color(Color::rgb8(92, 92, 255))
-                }).lens(lol_chat::Friends::busy.in_arc()))
-            .with_child(
-                List::new(|| {
-                    Label::new(|friend: &lol_chat::Friend, _env: &_| friend.name.clone())
-                        .with_text_color(Color::rgb8(255, 32, 32))
-                }).lens(lol_chat::Friends::away.in_arc()))
+            .with_child(friend_status_group(Color::rgb8(32, 255, 32))
+                .lens(lol_chat::Friends::online.in_arc()))
+            .with_child(friend_status_group(Color::rgb8(92, 92, 255))
+                .lens(lol_chat::Friends::busy.in_arc()))
+            .with_child(friend_status_group(Color::rgb8(255, 32, 32))
+                .lens(lol_chat::Friends::away.in_arc()))
+
             .with_child(Label::new("Other")
                 .center().expand_width())
-            .with_child(
-                List::new(|| {
-                    Label::new(|friend: &lol_chat::Friend, _env: &_| friend.name.clone())
-                        .with_text_color(Color::rgb8(192, 192, 160))
-                }).lens(lol_chat::Friends::other.in_arc()))
+            .with_child(friend_status_group(Color::rgb8(192, 192, 160))
+                .lens(lol_chat::Friends::other.in_arc())
+            )
 
             .with_child(Label::new("Offline")
                 .center().expand_width())
-            .with_child(
-                List::new(|| {
-                    Label::new(|friend: &lol_chat::Friend, _env: &_| friend.name.clone())
-                        .with_text_color(Color::grey8(128))
-                }).lens(lol_chat::Friends::offline.in_arc()))
+            .with_child(friend_status_group(Color::grey8(128))
+                .lens(lol_chat::Friends::offline.in_arc()))
             .cross_axis_alignment(CrossAxisAlignment::Start)
             .lens(AppState::friends)
     ).vertical()

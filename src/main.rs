@@ -9,7 +9,6 @@ mod util;
 mod event_handlers;
 mod views;
 
-
 use util::*;
 use event_handlers::*;
 use views::app_view_switcher;

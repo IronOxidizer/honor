@@ -10,7 +10,7 @@ use serde_json;
 use anyhow::Result;
 use serde::{Deserialize, de::DeserializeOwned};
 use reqwest::Url;
-use druid::{Data, Lens, ExtEventSink, im::{Vector, HashMap}};
+use druid::{Data, Lens, ExtEventSink, im::Vector};
 use regex::Regex;
 use base64;
 use app_dirs::{data_root, AppDataType};
@@ -27,7 +27,9 @@ pub struct AppState {
     pub view: AppView,
     pub current_summoner: Arc<lol_summoner::Summoner>,
     pub queues: Arc<lol_game_queues::Queues>, // Maybe queues should be a hashmap too
-    pub friends: Arc<lol_chat::Friends>,
+    // Don't wrap in Arc because each individual friend state might change because of websocket events, this each Friend struct is small enough that cloning is probably
+    //  faster than Arc
+    pub friends: Arc<lol_chat::Friends>, 
 
     pub chat_contents: String
 }

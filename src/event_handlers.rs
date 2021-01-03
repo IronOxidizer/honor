@@ -1,5 +1,5 @@
 use std::sync::Arc;
-use druid::{ExtEventSink, Selector, Target, SingleUse, im::{Vector, HashMap}};
+use druid::{ExtEventSink, Selector, Target, SingleUse, im::Vector};
 use anyhow::Result;
 
 use super::util::*;
