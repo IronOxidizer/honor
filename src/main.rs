@@ -1,3 +1,6 @@
+#![cfg_attr(all(not(debug_assertions), target_os = "windows"), windows_subsystem = "windows")]
+// ^ Only enabled on Windows + Release as it interferes with stderr making debugging hard
+
 use std::sync::Arc;
 
 use anyhow::Result;
@@ -15,6 +18,9 @@ pub const HOST: &str = "127.0.0.1";
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    //start_lcu()?;
+    // After attempting to start LCU, display spinner while waiting for connection, once connected kill LCU UX
+
     let root_window = WindowDesc::new(build_root_widget)
         .title("Honor")
         //.show_titlebar(false) // Keep title bar until window is controls and drag is implemented
@@ -26,7 +32,7 @@ async fn main() -> Result<()> {
     // Setup and initialize HTTP and WebSocket connection to LCU
     let (port, token) = get_lcu_connect_info()?;
     let (wamp_sink, wamp_stream) = lcu_api::connect_lcu_wamp(port, token.clone()).await?.split();
-    tokio::spawn(poll_spin(wamp_stream, launcher.get_external_handle()));
+    tokio::spawn(wamp_poll_spin(wamp_stream, launcher.get_external_handle()));
     let http_connection = get_connection(port, token)?;
     
     // Initialize app state
@@ -75,7 +81,7 @@ impl AppState {
     }
 }
 
-async fn poll_spin(mut wamp_stream: WampStream, _event_sink: ExtEventSink) {
+async fn wamp_poll_spin(mut wamp_stream: WampStream, _event_sink: ExtEventSink) {
     loop {
         if let Some(Ok(a)) = wamp_stream.next().await {
             eprintln!("{:?}", a)

@@ -19,7 +19,6 @@ impl Default for AppView {
     }
 }
 
-
 pub fn build_root_widget() -> impl Widget<AppState> {
     // Top bar + borderless not feasible until we can emulate drag to reposition window
     ViewSwitcher::new(
@@ -35,12 +34,9 @@ impl<W: Widget<AppState>> Controller<AppState, W> for EventHandler {
     fn event(&mut self, child: &mut W, ctx: &mut EventCtx, event: &Event, data: &mut AppState, env: &Env) {
         match event {
             Event::WindowConnected => {
-                tokio::spawn(lol_summoner::current_summoner(
-                    data.http_connection.clone(), data.event_sink.clone()));
-                tokio::spawn(lol_game_queues::queues(
-                    data.http_connection.clone(), data.event_sink.clone()));
-                tokio::spawn(lol_chat::friends(
-                    data.http_connection.clone(), data.event_sink.clone()));
+                lol_summoner::current_summoner(data.http_connection.clone(), data.event_sink.clone());
+                lol_game_queues::queues(data.http_connection.clone(), data.event_sink.clone());
+                lol_chat::friends(data.http_connection.clone(), data.event_sink.clone());
             },
             Event::Command(cmd) => {
                 if cmd.is(lol_summoner::SET_CURRENT_SUMMONER) {
@@ -60,7 +56,6 @@ impl<W: Widget<AppState>> Controller<AppState, W> for EventHandler {
     }
 }
 
-
 // Consider using Buttons or lone Radio buttons and handle the logic manually
 // RadioGroups require a static size, might be able to use lazy_static to do this
 pub fn view_main() -> impl Widget<AppState> {
@@ -71,7 +66,7 @@ pub fn view_main() -> impl Widget<AppState> {
                 .with_child(Label::new(primary_role))
                 .with_child(Label::new(secondary_role))
                 .padding(4.0)
-        ).background(Color::grey8(128))
+        ).background(Color::grey8(58))
             .rounded(8.0)
             .padding((4.0, 8.0))
     }

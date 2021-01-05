@@ -1,5 +1,4 @@
 use std::sync::Arc;
-use anyhow::Result;
 use serde::Deserialize;
 use druid::{Data, Lens, ExtEventSink, Selector, SingleUse, Target};
 
@@ -48,13 +47,14 @@ struct _RerollPoints {
 }
 
 pub const SET_CURRENT_SUMMONER: Selector<SingleUse<Arc<lol_summoner::Summoner>>> = Selector::new("SET_CURRENT_SUMMONER");
-pub async fn current_summoner(http_connection: HttpConnection, event_sink: Arc<ExtEventSink>) -> Result<()> {
+pub fn current_summoner(http_connection: HttpConnection, event_sink: Arc<ExtEventSink>) {
+    tokio::spawn(async move {
     let summoner = Arc::new(Summoner::from(
-        get_request::<_Summoner>(http_connection, "lol-summoner/v1/current-summoner").await?
+        get_request::<_Summoner>(http_connection, "lol-summoner/v1/current-summoner").await.unwrap()
     ));
     event_sink.submit_command(
         SET_CURRENT_SUMMONER,
         SingleUse::new(summoner),
-        Target::Auto)?;
-    Ok(())
+        Target::Auto).unwrap();
+    });
 }

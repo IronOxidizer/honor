@@ -6,6 +6,7 @@ pub mod lol_game_queues;
 use std::{sync::Arc,
     process::Command,
     path::PathBuf,
+    io::{Error, ErrorKind},
     fs::{File, read_to_string}};
 
 use anyhow::Result;
@@ -61,15 +62,10 @@ fn get_riot_client_path() -> Result<PathBuf> {
     Ok(rc_live)
 }
 
-pub fn run_lcu() -> Result<()> {
-    if cfg!(target_os = "windows") {
-        Command::new(get_riot_client_path()?)
-            .args(&[r"C:\Riot Games\Riot Client\RiotClientServices.exe", "--launch-product=league_of_legends", "--launch-patchline=live"])
-            .spawn()?;
-    } else {
-        // MacOS
-        unimplemented!();
-    }
+pub fn start_lcu() -> Result<()> {
+    Command::new(get_riot_client_path()?)
+        .args(&["--launch-product=league_of_legends", "--launch-patchline=live"])
+        .spawn()?;
     Ok(())
 }
 
@@ -77,17 +73,14 @@ pub fn run_lcu() -> Result<()> {
 // Consider using the lockfile method once we have the riot client path
 // This should be cached somewhere unless LCU is reset, can be expensive
 pub fn get_lcu_connect_info() -> Result<(u16, String)> {
-    if cfg!(target_os = "windows") {
-        let path = get_riot_client_path()?.join("../../League of Legends/lockfile").canonicalize()?;
-        let contents = read_to_string(path)?;
-        let segments: Vec<&str> = contents.split(':').collect();
-        let port: u16 = segments[2].parse()?;
-        let token = segments[3];
-        Ok((port, format!("Basic {}", base64::encode(format!("riot:{}", token)))))
-    } else {
-        // MacOS
-        unimplemented!()
-    }
+    let path = get_riot_client_path()?.join("../../League of Legends/lockfile").canonicalize()?;
+    let contents = read_to_string(path)?;
+    let segments: Vec<&str> = contents.split(':').collect();
+    let port: u16 = segments.get(2)
+        .ok_or(Error::new(ErrorKind::NotFound, "Lockfile port nonexistent"))?.parse()?;
+    let token = segments.get(3)
+        .ok_or(Error::new(ErrorKind::NotFound, "Lockfile token nonexistent"))?;
+    Ok((port, format!("Basic {}", base64::encode(format!("riot:{}", token)))))
 }
 
 pub fn get_connection(port: u16, token: String) -> Result<HttpConnection> {
@@ -101,12 +94,12 @@ pub fn get_connection(port: u16, token: String) -> Result<HttpConnection> {
     })
 }
 
+// Set Basic authentication with request header, e.g riot:sesspswd => base64 encode => cmlvdDpwYXNzd29yZA==
+//     https://www.hextechdocs.dev/lol/lcuapi/6.getting-started-with-the-lcu-api#connecting
 // LCU uses a self-signed certificate so create a custom connector to skip TLS verification
 //     https://www.hextechdocs.dev/lol/lcuapi/6.getting-started-with-the-lcu-api#performing-our-first-request
 //     Consider adding the root certificate in the future, more complicated and might cause other issues
 //     Get cert from here https://www.hextechdocs.dev/lol/lcuapi/6.getting-started-with-the-lcu-api#performing-our-first-request
-// Set Basic authentication with request header, e.g riot:sesspswd => base64 encode => cmlvdDpwYXNzd29yZA==
-//     https://www.hextechdocs.dev/lol/lcuapi/6.getting-started-with-the-lcu-api#connecting
 pub async fn connect_lcu_wamp(port: u16, token: String) -> Result<WebSocketStream<Stream<TcpStream, TlsStream<TcpStream>>>> { // Result<WebSocketStream<TlsStream<TcpStream>>> {
     const HOST: &str = "127.0.0.1";
     let request = Request::get(format!("wss://{}:{}", HOST, port))
@@ -129,7 +122,7 @@ pub fn wamp_send(wamp_sink: WampSink, message_type: MessageTypes, message: &'sta
     });
 }
 
-// Returns a generic that implements Deserialize
+// Returns a generic that implements DeserializeOwned
 // Reuse client everywhere for higher perofrmance. reqwest::get creates a new client each time which is slow
 pub async fn get_request<T>(connection: HttpConnection, endpoint: &str) -> Result<T> 
 where T: DeserializeOwned {

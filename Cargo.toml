@@ -1,10 +1,17 @@
+#cargo-features = ["strip"]
+
 [package]
 name = "honor"
 version = "0.1.0"
 authors = ["Iron Oxidizer"]
 edition = "2018"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[profile.release]
+lto = true
+opt-level = 'z'
+codegen-units = 1
+panic = 'abort'
+#strip = "symbols"
 
 [dependencies]
 anyhow = { version = "1.0.37", default-features = false }

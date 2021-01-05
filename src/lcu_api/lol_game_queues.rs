@@ -1,4 +1,3 @@
-use anyhow::Result;
 use serde::Deserialize;
 use std::sync::Arc;
 
@@ -125,14 +124,15 @@ struct _QueueRewards {
 }
 
 pub const SET_QUEUES: Selector<SingleUse<Arc<Queues>>> = Selector::new("SET_QUEUES");
-pub async fn queues(http_connection: HttpConnection, event_sink: Arc<ExtEventSink>) -> Result<()> {
-    let queues = Arc::new(Queues::from(
-        get_request::<Vec<_Queue>>(http_connection, "lol-game-queues/v1/queues").await?
-    ));
+pub fn queues(http_connection: HttpConnection, event_sink: Arc<ExtEventSink>) {
+    tokio::spawn(async move {
+        let queues = Arc::new(Queues::from(
+            get_request::<Vec<_Queue>>(http_connection, "lol-game-queues/v1/queues").await.unwrap()
+        ));
 
-    event_sink.submit_command(
-        SET_QUEUES,
-        SingleUse::new(queues),
-        Target::Auto)?;
-    Ok(())
+        event_sink.submit_command(
+            SET_QUEUES,
+            SingleUse::new(queues),
+            Target::Auto).unwrap();
+    });
 }

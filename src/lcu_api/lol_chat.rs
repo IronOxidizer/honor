@@ -1,4 +1,3 @@
-use anyhow::Result;
 use serde::Deserialize;
 use std::sync::Arc;
 use druid::{Data, Lens, ExtEventSink, Selector, SingleUse, Target,
@@ -88,13 +87,14 @@ struct _Friend {
 }
 
 pub const SET_FRIENDS: Selector<SingleUse<Arc<Friends>>> = Selector::new("SET_FRIENDS");
-pub async fn friends( http_connection: HttpConnection, event_sink: Arc<ExtEventSink>) -> Result<()> {
-    let friends = Arc::new(Friends::from(
-        get_request::<Vec<_Friend>>(http_connection, "lol-chat/v1/friends").await.expect("Something went wrong here")
-    ));
-    event_sink.submit_command(
-        SET_FRIENDS,
-        SingleUse::new(friends),
-        Target::Auto)?;
-    Ok(())
+pub fn friends( http_connection: HttpConnection, event_sink: Arc<ExtEventSink>) {
+    tokio::spawn(async move {
+        let friends = Arc::new(Friends::from(
+            get_request::<Vec<_Friend>>(http_connection, "lol-chat/v1/friends").await.unwrap()
+        ));
+        event_sink.submit_command(
+            SET_FRIENDS,
+            SingleUse::new(friends),
+            Target::Auto).unwrap();
+    });
 }
