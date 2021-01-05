@@ -1,16 +1,40 @@
 use anyhow::Result;
 use serde::Deserialize;
-use druid::{Data, Lens};
-use druid::im::Vector;
 use std::sync::Arc;
 
-use super::super::util::*;
+use druid::{Data, Lens, ExtEventSink, Selector, SingleUse, Target,
+    im::{Vector}};
+
+use super::*;
 
 #[derive(Clone, Default, Debug, Data, Lens)]
 pub struct Queues {
     pub ranked: Vector<Queue>,
     pub casual: Vector<Queue>,
     pub versus_ai: Vector<Queue>
+}
+
+impl From<Vec<_Queue>> for Queues {
+    fn from(mut queue_vec: Vec<_Queue>) -> Self {
+        queue_vec.retain(|q| q.queueAvailability == "Available");
+        queue_vec.sort_by(|a, b| a.description.cmp(&b.description));
+        let queue_iter = queue_vec.into_iter();
+
+        let ranked = queue_iter.clone()
+            .filter_map(|q| if q.isRanked && !q.description.contains("Clash") {Some(q.to_data())} else {None}).collect();
+        let versus_ai = queue_iter.clone()
+            .filter_map(|q| if q.category == "VersusAi" || q.description.contains("Tutorial")
+            {Some(q.to_data())} else {None}).collect();
+        let casual = queue_iter
+            .filter_map(|q| if !q.isRanked && q.category != "VersusAi" && !q.description.contains("Tutorial")
+            {Some(q.to_data())} else {None}).collect();
+
+        Self {
+            ranked: ranked,
+            casual: casual,
+            versus_ai: versus_ai
+        }
+    }
 }
 
 #[derive(Clone, Debug, Data, Lens)]
@@ -100,24 +124,15 @@ struct _QueueRewards {
     partySizeIpRewards: Vec<u32>
 }
 
-pub async fn queues(connection_data: Connection) -> Result<Arc<Queues>> {
-    let mut available = get_request::<Vec<_Queue>>(connection_data, "lol-game-queues/v1/queues").await?;
-    available.retain(|q| q.queueAvailability == "Available");
-    available.sort_by(|a, b| a.description.cmp(&b.description));
-    let avail_iter = available.into_iter();
+pub const SET_QUEUES: Selector<SingleUse<Arc<Queues>>> = Selector::new("SET_QUEUES");
+pub async fn queues(http_connection: HttpConnection, event_sink: Arc<ExtEventSink>) -> Result<()> {
+    let queues = Arc::new(Queues::from(
+        get_request::<Vec<_Queue>>(http_connection, "lol-game-queues/v1/queues").await?
+    ));
 
-    let ranked = avail_iter.clone()
-        .filter_map(|q| if q.isRanked && !q.description.contains("Clash") {Some(q.to_data())} else {None}).collect();
-    let versus_ai = avail_iter.clone()
-        .filter_map(|q| if q.category == "VersusAi" || q.description.contains("Tutorial")
-        {Some(q.to_data())} else {None}).collect();
-    let casual = avail_iter
-        .filter_map(|q| if !q.isRanked && q.category != "VersusAi" && !q.description.contains("Tutorial")
-        {Some(q.to_data())} else {None}).collect();
-
-    Ok(Arc::new(Queues {
-        ranked: ranked,
-        casual: casual,
-        versus_ai: versus_ai
-    }))
+    event_sink.submit_command(
+        SET_QUEUES,
+        SingleUse::new(queues),
+        Target::Auto)?;
+    Ok(())
 }

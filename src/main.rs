@@ -1,97 +1,84 @@
-#[macro_use]
-extern crate lazy_static;
-
 use std::sync::Arc;
-use druid::{AppLauncher, Widget, WidgetExt, WindowDesc, Env, EventCtx, Event, widget::Controller};
+
+use anyhow::Result;
+use futures::StreamExt;
+use tokio::sync::Mutex;
+use druid::{AppLauncher, WindowDesc, Data, Lens, ExtEventSink};
 
 mod lcu_api;
-mod util;
-mod event_handlers;
 mod views;
 
-use util::*;
-use event_handlers::*;
-use views::app_view_switcher;
-use views::view_main;
+use views::*;
+use lcu_api::*;
+
 pub const HOST: &str = "127.0.0.1";
 
 #[tokio::main]
-async fn main() {
+async fn main() -> Result<()> {
     let root_window = WindowDesc::new(build_root_widget)
         .title("Honor")
-        // Keep title bar until window is controls and drag is implemented
-        //.show_titlebar(false)
-        .with_min_size((640., 360.));
+        //.show_titlebar(false) // Keep title bar until window is controls and drag is implemented
+        .with_min_size((640., 360.))
+        .window_size((640., 360.));
 
     let launcher = AppLauncher::with_window(root_window);
 
+    // Setup and initialize HTTP and WebSocket connection to LCU
+    let (port, token) = get_lcu_connect_info()?;
+    let (wamp_sink, wamp_stream) = lcu_api::connect_lcu_wamp(port, token.clone()).await?.split();
+    tokio::spawn(poll_spin(wamp_stream, launcher.get_external_handle()));
+    let http_connection = get_connection(port, token)?;
+    
+    // Initialize app state
     let app_state = AppState::new(
-        Arc::new(launcher.get_external_handle()),
-        get_connection_data().expect("Could not get connection data")
-    );
+        Arc::new(Mutex::new(wamp_sink)),
+        http_connection,
+        Arc::new(launcher.get_external_handle()));
 
+    // Launch app with app state
     launcher
         // .use_simple_logger()
         .launch(app_state)
         .expect("launch failed");
+
+    Ok(())
 }
 
-fn build_root_widget() -> impl Widget<AppState> {
-    // Top bar, not feasible until we can emulate drag to reposition window
-    // Flex::column()
-    // .with_child(
-    //     Flex::row()
-    //         .with_child(Label::new("Top Bar"))
-    //         .with_flex_spacer(1.0)
-    //         .with_child(Label::new("o - x"))
-    //         .main_axis_alignment(MainAxisAlignment::SpaceBetween) // Maybe remove?
-    //         .cross_axis_alignment(CrossAxisAlignment::Center) // Maybe change to CrossAxis::Start
-    //         .border(Color::WHITE, 0.5))
-    // .with_child(Flex::row()
-    //     .with_child(app_view_switcher())
-    // ).controller(EventHandler)
-
-    //app_view_switcher()
-    view_main()
-        .controller(EventHandler)
-    
-    // Tabs::new()
-    //     .with_axis(Axis::Vertical)
-    //     .with_tab("tab0", Label::new("This is tab0"))
-    //     .with_tab("tab1", Label::new("This is tab1"))
-    //     .with_tab("tab2", Label::new("This is tab2"))
+// Everything in an Rc up to the scope of which the data is accquired / changing
+// When using Vector, Arc is not needed
+#[derive(Clone, Data, Lens)]
+pub struct AppState {
+    pub wamp_sink: WampSink,
+    pub http_connection: HttpConnection,
+    pub event_sink: Arc<ExtEventSink>,
+    pub view: AppView, // Implements copy, faster to not use Arc
+    pub current_summoner: Arc<lol_summoner::Summoner>,
+    pub queues: Arc<lol_game_queues::Queues>,
+    // Don't wrap in Arc because each individual friend state might change because of websocket events, each Friend struct is small enough that cloning is probably faster than Arc
+    pub friends: Arc<lol_chat::Friends>, 
+    pub chat_contents: String
 }
 
-struct EventHandler;
-impl<W: Widget<AppState>> Controller<AppState, W> for EventHandler {
-    fn event(&mut self, child: &mut W, ctx: &mut EventCtx, event: &Event, data: &mut AppState, env: &Env) {
-        match event {
-            Event::WindowConnected => {
-                tokio::spawn(event_handlers::update_current_summoner(
-                    data.event_sink.clone(), data.connection.clone())); 
-                    
-                tokio::spawn(event_handlers::update_queues(
-                    data.event_sink.clone(), data.connection.clone()));
 
-                tokio::spawn(event_handlers::update_friends(
-                    data.event_sink.clone(), data.connection.clone()));
-                
-                ()
-            },
-            Event::Command(cmd) => {
-                if cmd.is(SET_CURRENT_SUMMONER) {
-                    if let Some(summoner) = cmd.get_unchecked(SET_CURRENT_SUMMONER).take()
-                        {data.current_summoner = summoner}
-                } else if cmd.is(SET_QUEUES) {
-                    if let Some(queues) = cmd.get_unchecked(SET_QUEUES).take()
-                        {data.queues = queues}
-                } else if cmd.is(SET_FRIENDS) {
-                    if let Some(friends) = cmd.get_unchecked(SET_FRIENDS).take()
-                        {data.friends = friends}
-                }
-            },
-            _ => ()
-        };
-        child.event(ctx, event, data, env)
+impl AppState {
+    pub fn new(wamp_sink: WampSink, http_connection: HttpConnection, event_sink: Arc<ExtEventSink>) -> Self {
+        Self {
+            wamp_sink,
+            http_connection: http_connection,
+            event_sink: event_sink,
+            view: Default::default(),
+            current_summoner: Default::default(),
+            queues: Default::default(),
+            friends: Default::default(),
+            chat_contents: Default::default()
+        }
+    }
+}
+
+async fn poll_spin(mut wamp_stream: WampStream, _event_sink: ExtEventSink) {
+    loop {
+        if let Some(Ok(a)) = wamp_stream.next().await {
+            eprintln!("{:?}", a)
+        }
     }
 }

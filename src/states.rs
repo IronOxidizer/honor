@@ -10,14 +10,14 @@ use super::lol_summoner;
 #[derive(Clone, Data, Lens)]
 pub struct AppState {
     pub event_sink: Arc<ExtEventSink>,
-    pub connection: ConnectionState,
+    pub connection: HttpConnectionState,
     //pub view: AppView,
     pub current_summoner: Vector<SummonerState>,
     //pub queues: Arc<Vec<lol_game_queues::Queue>>
 }
 
 impl AppState {
-    pub fn new(event_sink: Arc<ExtEventSink>, connection: ConnectionState) -> Self {
+    pub fn new(event_sink: Arc<ExtEventSink>, connection: HttpConnectionState) -> Self {
         Self {
             event_sink: event_sink,
             connection: connection,
@@ -30,7 +30,7 @@ impl AppState {
 
 // Might have to use arc mutex/rwlock to pass around to threads in async
 #[derive(Clone, Data, Lens)]
-pub struct ConnectionState {
+pub struct HttpConnectionState {
     pub client: Arc<reqwest::Client>,
     pub port: u16,
     pub token: String

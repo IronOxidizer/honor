@@ -1,10 +1,10 @@
 use anyhow::Result;
 use serde::Deserialize;
 use std::sync::Arc;
-use druid::{Data, Lens};
-use druid::im::{Vector};
+use druid::{Data, Lens, ExtEventSink, Selector, SingleUse, Target,
+    im::{Vector}};
 
-use super::super::util::*;
+use super::*;
 
 
 // Seperate into 3 rows, League (different background or text color depending on status),
@@ -28,11 +28,11 @@ impl From<Vec<_Friend>> for Friends {
         let mut friends = Self::default();
         for friend in _friend_vec.into_iter() {
             match friend.availability.as_str() {
-                "chat" => friends.online.push_back(friend.to_owned().to_data()),
-                "dnd" => friends.busy.push_back(friend.to_owned().to_data()),
-                "away" => friends.away.push_back(friend.to_owned().to_data()),
-                "offline" => friends.offline.push_back(friend.to_owned().to_data()),
-                _ => friends.other.push_back(friend.to_owned().to_data())
+                "chat" => friends.online.push_back(friend.into()),
+                "dnd" => friends.busy.push_back(friend.into()),
+                "away" => friends.away.push_back(friend.into()),
+                "offline" => friends.offline.push_back(friend.into()),
+                _ => friends.other.push_back(friend.into())
             }
         }
         friends
@@ -43,6 +43,15 @@ impl From<Vec<_Friend>> for Friends {
 pub struct Friend {
     pub id: String,
     pub name: String
+}
+
+impl From<_Friend> for Friend {
+    fn from(_friend: _Friend) -> Self {
+        Self {
+            id: _friend.id,
+            name: _friend.name
+        }
+    }
 }
 
 #[allow(non_snake_case)]
@@ -74,17 +83,14 @@ struct _Friend {
     time: u64
 }
 
-impl _Friend {
-    fn to_data(self) -> Friend {
-        Friend {
-            id: self.id,
-            name: if self.name.is_empty() {self.gameName} else {self.name}
-        }
-    }
-}
-
-pub async fn friends(connection: Connection) ->  Result<Arc<Friends>> {
-    Ok(Arc::new(Friends::from(
-        get_request::<Vec<_Friend>>(connection, "lol-chat/v1/friends").await?
-    )))
+pub const SET_FRIENDS: Selector<SingleUse<Arc<Friends>>> = Selector::new("SET_FRIENDS");
+pub async fn friends( http_connection: HttpConnection, event_sink: Arc<ExtEventSink>) -> Result<()> {
+    let friends = Arc::new(Friends::from(
+        get_request::<Vec<_Friend>>(http_connection, "lol-chat/v1/friends").await.expect("Something went wrong here")
+    ));
+    event_sink.submit_command(
+        SET_FRIENDS,
+        SingleUse::new(friends),
+        Target::Auto)?;
+    Ok(())
 }
