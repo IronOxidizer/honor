@@ -49,7 +49,11 @@ impl From<_Friend> for Friend {
     fn from(_friend: _Friend) -> Self {
         Self {
             id: _friend.id,
-            name: _friend.name
+            name: if _friend.name.is_empty() {
+                    _friend.gameName
+                } else {
+                    _friend.name
+                }
         }
     }
 }

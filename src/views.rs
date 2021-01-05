@@ -185,7 +185,8 @@ pub fn view_main() -> impl Widget<AppState> {
             .with_child(summoner_card("Player3", "Support", "Middle"))
             .with_child(summoner_card("Player4", "Bottom", "Middle"))
             .with_child(summoner_card("PlayerWithALongName5", "Middle", "Bottom"))
-    );//.debug_paint_layout().boxed();
+            .with_child(summoner_card("PlayerWithALongName6", "Middle", "Bottom"))
+    ); //.debug_paint_layout().boxed();
 
     Flex::column()
         .with_flex_child(top_row, 1.0)
