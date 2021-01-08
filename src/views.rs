@@ -1,5 +1,7 @@
-use druid::{Color, Data, KeyOrValue, LensExt, RenderContext, Widget, WidgetExt, Env, EventCtx, Event,
-    im::{Vector},
+use std::sync::Arc;
+use druid::{Color, Data, KeyOrValue, LensExt, RenderContext, Widget,
+    WidgetExt, Env, EventCtx, Event, SingleUse,
+    im::{Vector}, // All im types are wrapped with Arc thus are cheap to clone
     widget::{Flex, Label, List, ViewSwitcher, Button, Container,
         Scroll, TextBox, Painter, CrossAxisAlignment, Controller}};
 
@@ -24,7 +26,7 @@ pub fn build_root_widget() -> impl Widget<AppState> {
     ViewSwitcher::new(
         |data: &AppState, _env| data.view,
         |view, _data, _env| match view {
-            Main => Box::new(view_main())
+            AppView::Main => Box::new(view_main())
         }
     ).controller(EventHandler)
 }
@@ -34,20 +36,23 @@ impl<W: Widget<AppState>> Controller<AppState, W> for EventHandler {
     fn event(&mut self, child: &mut W, ctx: &mut EventCtx, event: &Event, data: &mut AppState, env: &Env) {
         match event {
             Event::WindowConnected => {
-                lol_summoner::current_summoner(data.http_connection.clone(), data.event_sink.clone());
-                lol_game_queues::queues(data.http_connection.clone(), data.event_sink.clone());
-                lol_chat::friends(data.http_connection.clone(), data.event_sink.clone());
+                // Hydrate initial fields
+                summoner::get_current_summoner(data.http_connection.clone(), data.event_sink.clone());
+                game_queues::get_queues(data.http_connection.clone(), data.event_sink.clone());
+                chat::get_friends(data.http_connection.clone(), data.event_sink.clone());
+
+                // Subscribe to events
+                wamp_send(data.wamp_sink.clone(), MessageTypes::Subscribe, "OnJsonApiEvent_lol-chat_v1_friends");
             },
             Event::Command(cmd) => {
-                if cmd.is(lol_summoner::SET_CURRENT_SUMMONER) {
-                    if let Some(summoner) = cmd.get_unchecked(lol_summoner::SET_CURRENT_SUMMONER).take()
-                        {data.current_summoner = summoner}
-                } else if cmd.is(lol_game_queues::SET_QUEUES) {
-                    if let Some(queues) = cmd.get_unchecked(lol_game_queues::SET_QUEUES).take()
-                        {data.queues = queues}
-                } else if cmd.is(lol_chat::SET_FRIENDS) {
-                    if let Some(friends) = cmd.get_unchecked(lol_chat::SET_FRIENDS).take()
-                        {data.friends = friends}
+                if let Some(summoner) = cmd.get(SET_CURRENT_SUMMONER).and_then(SingleUse::take) {
+                    data.current_summoner = summoner
+                } else if let Some(queues) = cmd.get(SET_QUEUES).and_then(SingleUse::take) {
+                    data.queues = queues
+                } else if let Some(friends) = cmd.get(SET_FRIENDS).and_then(SingleUse::take) {
+                    data.friends = friends
+                } else if let Some(_friend) = cmd.get(UPDATE_FRIEND).and_then(SingleUse::take) {
+                    data.friends.update(_friend)
                 }
             },
             _ => ()
@@ -56,8 +61,6 @@ impl<W: Widget<AppState>> Controller<AppState, W> for EventHandler {
     }
 }
 
-// Consider using Buttons or lone Radio buttons and handle the logic manually
-// RadioGroups require a static size, might be able to use lazy_static to do this
 pub fn view_main() -> impl Widget<AppState> {
     fn summoner_card(summoner_name: &'static str, primary_role: &'static str, secondary_role: &'static str) -> impl Widget<AppState> {
         Container::new(
@@ -71,11 +74,11 @@ pub fn view_main() -> impl Widget<AppState> {
             .padding((4.0, 8.0))
     }
 
-    fn queue_list() -> impl Widget<Vector<lol_game_queues::Queue>> {
+    fn queue_list() -> impl Widget<Vector<game_queues::Queue>> {
         List::new(|| {
-            Label::new(|queue: &lol_game_queues::Queue, _: &_| {
+            Label::new(|queue: &game_queues::Queue, _env: &Env | {
                 queue.description.clone()
-            }).background(Painter::new(|ctx, _, _| {
+            }).background(Painter::new(|ctx, _data, _env| {
                 let bounds = ctx.size().to_rect();
                 if ctx.is_active() {
                     ctx.fill(bounds, &Color::rgb8(32, 32, 32));
@@ -87,11 +90,11 @@ pub fn view_main() -> impl Widget<AppState> {
         })
     }
 
-    fn friend_status_group(color: impl Into<KeyOrValue<Color>> + Clone + 'static) -> impl Widget<Vector<lol_chat::Friend>> {
+    fn friend_status_group(color: impl Into<KeyOrValue<Color>> + Clone + 'static) -> impl Widget<Vector<Arc<chat::Friend>>> {
         List::new(move || {
-            Label::new(|friend: &lol_chat::Friend, _: &_| friend.name.clone())
+            Label::new(|friend: &Arc<chat::Friend>, _env: &Env | friend.name.clone())
                 .with_text_color(color.clone())
-                .background(Painter::new(|ctx, _, _| {
+                .background(Painter::new(|ctx, _data, _env| {
                     let bounds = ctx.size().to_rect();
                     if ctx.is_active() {
                         ctx.fill(bounds, &Color::rgb8(32, 32, 32));
@@ -99,7 +102,8 @@ pub fn view_main() -> impl Widget<AppState> {
                         ctx.fill(bounds, &Color::rgb8(64, 64, 64))
                     }
                 }))
-                .on_click(move |_ctx, data, _| eprintln!("{:?}", data))
+                // Try to get http connection from environment
+                .on_click(move |_ctx, data, _env|lobby::post_lobby_invitations(data, data.id))// lobby::post_lobby_invitations(_env.get_all(), data.id))
                 .expand_width()
         })
     }
@@ -108,13 +112,13 @@ pub fn view_main() -> impl Widget<AppState> {
         Flex::column()
             .with_child(Label::new("Ranked")
                 .center().expand_width())
-            .with_child(queue_list().lens(lol_game_queues::Queues::ranked.in_arc()))
+            .with_child(queue_list().lens(game_queues::Queues::ranked.in_arc()))
             .with_child(Label::new("Casual")
                 .center().expand_width())
-            .with_child(queue_list().lens(lol_game_queues::Queues::casual.in_arc()))
+            .with_child(queue_list().lens(game_queues::Queues::casual.in_arc()))
             .with_child(Label::new("Versus AI")
                 .center().expand_width())
-            .with_child(queue_list().lens(lol_game_queues::Queues::versus_ai.in_arc()))
+            .with_child(queue_list().lens(game_queues::Queues::versus_ai.in_arc()))
             .lens(AppState::queues)
     ).vertical()
         .expand();
@@ -146,22 +150,22 @@ pub fn view_main() -> impl Widget<AppState> {
             .with_child(Label::new("Online")
                 .center().expand_width())
             .with_child(friend_status_group(Color::rgb8(32, 255, 32))
-                .lens(lol_chat::Friends::online.in_arc()))
+                .lens(chat::Friends::online))
             .with_child(friend_status_group(Color::rgb8(92, 92, 255))
-                .lens(lol_chat::Friends::busy.in_arc()))
+                .lens(chat::Friends::busy))
             .with_child(friend_status_group(Color::rgb8(255, 32, 32))
-                .lens(lol_chat::Friends::away.in_arc()))
+                .lens(chat::Friends::away))
 
             .with_child(Label::new("Other")
                 .center().expand_width())
             .with_child(friend_status_group(Color::rgb8(192, 192, 160))
-                .lens(lol_chat::Friends::other.in_arc())
+                .lens(chat::Friends::other)
             )
 
             .with_child(Label::new("Offline")
                 .center().expand_width())
             .with_child(friend_status_group(Color::grey8(128))
-                .lens(lol_chat::Friends::offline.in_arc()))
+                .lens(chat::Friends::offline))
             .cross_axis_alignment(CrossAxisAlignment::Start)
             .lens(AppState::friends)
     ).vertical()

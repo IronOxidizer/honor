@@ -46,14 +46,14 @@ struct _RerollPoints {
     pointsToReroll: u32
 }
 
-pub const SET_CURRENT_SUMMONER: Selector<SingleUse<Arc<lol_summoner::Summoner>>> = Selector::new("SET_CURRENT_SUMMONER");
-pub fn current_summoner(http_connection: HttpConnection, event_sink: Arc<ExtEventSink>) {
+
+pub fn get_current_summoner(http_connection: HttpConnection, event_sink: Arc<ExtEventSink>) {
     tokio::spawn(async move {
     let summoner = Arc::new(Summoner::from(
         get_request::<_Summoner>(http_connection, "lol-summoner/v1/current-summoner").await.unwrap()
     ));
     event_sink.submit_command(
-        SET_CURRENT_SUMMONER,
+        super::SET_CURRENT_SUMMONER,
         SingleUse::new(summoner),
         Target::Auto).unwrap();
     });

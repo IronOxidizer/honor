@@ -8,6 +8,11 @@ Built with:
 - druid
 - async-tungstenite
 
+TODO:
+- Switch to tokio single threaded (features = rt-core instead of rt-threaded)
+- Will allow us to use Rc instead of Arc and druid::im-rc instead of druid::im
+
+
 On launch
 - Call riotclient_killux
 

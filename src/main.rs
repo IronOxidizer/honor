@@ -1,5 +1,5 @@
 #![cfg_attr(all(not(debug_assertions), target_os = "windows"), windows_subsystem = "windows")]
-// ^ Only enabled on Windows + Release as it interferes with stderr making debugging hard
+// ^ Only enabled on Windows + Release as it interferes with stderr making debugging harder
 
 use std::sync::Arc;
 
@@ -32,7 +32,7 @@ async fn main() -> Result<()> {
     // Setup and initialize HTTP and WebSocket connection to LCU
     let (port, token) = get_lcu_connect_info()?;
     let (wamp_sink, wamp_stream) = lcu_api::connect_lcu_wamp(port, token.clone()).await?.split();
-    tokio::spawn(wamp_poll_spin(wamp_stream, launcher.get_external_handle()));
+    tokio::spawn(lcu_api::wamp_poll_spin(wamp_stream, launcher.get_external_handle()));
     let http_connection = get_connection(port, token)?;
     
     // Initialize app state
@@ -58,33 +58,23 @@ pub struct AppState {
     pub http_connection: HttpConnection,
     pub event_sink: Arc<ExtEventSink>,
     pub view: AppView, // Implements copy, faster to not use Arc
-    pub current_summoner: Arc<lol_summoner::Summoner>,
-    pub queues: Arc<lol_game_queues::Queues>,
-    // Don't wrap in Arc because each individual friend state might change because of websocket events, each Friend struct is small enough that cloning is probably faster than Arc
-    pub friends: Arc<lol_chat::Friends>, 
+    pub current_summoner: Arc<summoner::Summoner>,
+    pub queues: Arc<game_queues::Queues>,
+    pub friends: chat::Friends, // Don't wrap in Arc because each individual friend state might change because of websocket events
     pub chat_contents: String
 }
-
 
 impl AppState {
     pub fn new(wamp_sink: WampSink, http_connection: HttpConnection, event_sink: Arc<ExtEventSink>) -> Self {
         Self {
             wamp_sink,
-            http_connection: http_connection,
-            event_sink: event_sink,
+            http_connection,
+            event_sink,
             view: Default::default(),
             current_summoner: Default::default(),
             queues: Default::default(),
             friends: Default::default(),
             chat_contents: Default::default()
-        }
-    }
-}
-
-async fn wamp_poll_spin(mut wamp_stream: WampStream, _event_sink: ExtEventSink) {
-    loop {
-        if let Some(Ok(a)) = wamp_stream.next().await {
-            eprintln!("{:?}", a)
         }
     }
 }

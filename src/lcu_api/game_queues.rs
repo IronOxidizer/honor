@@ -1,8 +1,7 @@
 use serde::Deserialize;
 use std::sync::Arc;
-
 use druid::{Data, Lens, ExtEventSink, Selector, SingleUse, Target,
-    im::{Vector}};
+    im::Vector}; // All im types are wrapped with Arc thus are cheap to clone
 
 use super::*;
 
@@ -123,8 +122,7 @@ struct _QueueRewards {
     partySizeIpRewards: Vec<u32>
 }
 
-pub const SET_QUEUES: Selector<SingleUse<Arc<Queues>>> = Selector::new("SET_QUEUES");
-pub fn queues(http_connection: HttpConnection, event_sink: Arc<ExtEventSink>) {
+pub fn get_queues(http_connection: HttpConnection, event_sink: Arc<ExtEventSink>) {
     tokio::spawn(async move {
         let queues = Arc::new(Queues::from(
             get_request::<Vec<_Queue>>(http_connection, "lol-game-queues/v1/queues").await.unwrap()
