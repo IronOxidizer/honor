@@ -2,7 +2,6 @@
 // ^ Only enabled on Windows + Release as it interferes with stderr making debugging harder
 
 use std::sync::Arc;
-
 use anyhow::Result;
 use futures::StreamExt;
 use tokio::sync::Mutex;
@@ -37,7 +36,7 @@ async fn main() -> Result<()> {
     
     // Initialize app state
     let app_state = AppState::new(
-        Arc::new(Mutex::new(wamp_sink)),
+        Arc::new(Mutex::new(wamp_sink)), //This should be set in druid::Env
         http_connection,
         Arc::new(launcher.get_external_handle()));
 

@@ -15,7 +15,7 @@ use anyhow::Result;
 use serde::{Deserialize, de::DeserializeOwned};
 use app_dirs::{data_root, AppDataType};
 
-use reqwest::Url;
+use reqwest::{Url, header};
 use futures::{SinkExt, StreamExt, stream::{SplitSink, SplitStream}};
 use tokio::{sync::Mutex, net::TcpStream};
 use tokio_native_tls::TlsStream;
@@ -40,7 +40,8 @@ pub struct HttpConnection {
     pub token: String
 }
 
-pub const UPDATE_FRIEND: Selector<SingleUse<chat::_Friend>> = Selector::new("UPDATE_FRIEND");
+pub const POST_INVITE: Selector<SingleUse<u32>> = Selector::new("POST_INVITE");
+pub const UPDATE_FRIEND: Selector<SingleUse<chat::Friend>> = Selector::new("UPDATE_FRIEND");
 pub const SET_CURRENT_SUMMONER: Selector<SingleUse<Arc<summoner::Summoner>>> = Selector::new("SET_CURRENT_SUMMONER");
 pub const SET_QUEUES: Selector<SingleUse<Arc<game_queues::Queues>>> = Selector::new("SET_QUEUES");
 pub const SET_FRIENDS: Selector<SingleUse<chat::Friends>> = Selector::new("SET_FRIENDS");
@@ -151,9 +152,12 @@ where T: DeserializeOwned {
 pub async fn post_request(connection: HttpConnection, endpoint: &str, payload: String) -> Result<reqwest::Response> {
     let url = Url::parse(format!("https://{}:{}/{}", super::HOST, connection.port, endpoint).as_str())?;
 
+    eprintln!("{}", payload);
+
     Ok(connection.client.post(url)
         .body(payload)
-        .header("authorization", connection.token)
+        .header(header::AUTHORIZATION, connection.token)
+        .header(header::CONTENT_TYPE, "application/json")
         .send().await?)
 }
 
@@ -169,7 +173,7 @@ pub async fn wamp_poll_spin(mut wamp_stream: WampStream, event_sink: ExtEventSin
         match event_str {
             "OnJsonApiEvent_lol-chat_v1_friends" => {
                 // Consider using json.get(2) as it won't panic.
-                if let Ok(_friend) = serde_json::from_value::<chat::_Friend>(json[2]["data"].clone()) {
+                if let Ok(_friend) = serde_json::from_value::<chat::Friend>(json[2]["data"].clone()) {
                     event_sink.submit_command(
                         UPDATE_FRIEND,
                         SingleUse::new(_friend),

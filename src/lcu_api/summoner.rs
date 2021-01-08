@@ -1,6 +1,6 @@
 use std::sync::Arc;
 use serde::Deserialize;
-use druid::{Data, Lens, ExtEventSink, Selector, SingleUse, Target};
+use druid::{Data, Lens, ExtEventSink, SingleUse, Target};
 
 use super::*;
 
