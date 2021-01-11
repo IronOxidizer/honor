@@ -152,7 +152,7 @@ where T: DeserializeOwned {
 pub async fn post_request(connection: HttpConnection, endpoint: &str, payload: String) -> Result<reqwest::Response> {
     let url = Url::parse(format!("https://{}:{}/{}", super::HOST, connection.port, endpoint).as_str())?;
 
-    eprintln!("{}", payload);
+    //eprintln!("{}", payload);
 
     Ok(connection.client.post(url)
         .body(payload)
@@ -161,18 +161,19 @@ pub async fn post_request(connection: HttpConnection, endpoint: &str, payload: S
         .send().await?)
 }
 
-pub async fn wamp_poll_spin(mut wamp_stream: WampStream, event_sink: ExtEventSink) -> Result<()> {
+pub async fn wamp_poll_spin(mut wamp_stream: WampStream, event_sink: ExtEventSink) {
     loop {
         // Could be much much cleaner if we could .unwrap_or(|_|continue)
         let message = if let Some(Ok( m)) = wamp_stream.next().await { m } else { continue };
         let json = if let Ok(j) = serde_json::from_slice::<serde_json::Value>(message.into_data().as_slice())
             { j } else { continue };
-        let event = if let Some(e) = json.get(1) { e } else { continue };
-        let event_str = if let Some(es) = event.as_str() { es } else { continue };
+        let json_arr = if let Some(ja) = json.as_array() {
+            if ja.len() < 3 { continue } else { ja }
+        } else { continue };
+        let event = if let Some(es) = json_arr[1].as_str() { es } else { continue };
         
-        match event_str {
+        match event {
             "OnJsonApiEvent_lol-chat_v1_friends" => {
-                // Consider using json.get(2) as it won't panic.
                 if let Ok(_friend) = serde_json::from_value::<chat::Friend>(json[2]["data"].clone()) {
                     event_sink.submit_command(
                         UPDATE_FRIEND,
@@ -180,8 +181,8 @@ pub async fn wamp_poll_spin(mut wamp_stream: WampStream, event_sink: ExtEventSin
                         Target::Auto).unwrap();
                 }
             }, "OnJsonApiEvent_lol-lobby_v2_lobby" => {
-                eprintln!("Lobby event: {:?}", json[2]["data"].clone())
-            }, _ => eprintln!("No match: {}", event_str)
+                eprintln!("\n\nLobby event: {:?}", json[2]["data"].clone())
+            }, _ => eprintln!("Event no match: {}", event)
         }
     }
 }

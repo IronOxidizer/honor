@@ -1,125 +1,83 @@
+use serde::Serialize;
+
 use super::*;
 
-pub fn post_lobby_invitations(http_connection: HttpConnection, summoner_id: u32) {
-    tokio::spawn(async move {
-        let res = post_request(http_connection, "lol-lobby/v2/lobby/invitations",
-        format!("[
-  {{
-    \"invitationId\": \"\",
-    \"state\": \"Requested\",
-    \"timestamp\": \"\",
-    \"toSummonerId\": {},
-    \"toSummonerName\": \"\"
-  }}
-]", summoner_id)
-        ).await.unwrap();
-        eprintln!("{:?}", res);
-    });
+/*
+#[allow(non_snake_case)]
+pub struct Lobby {
+    canStartActivity: bool,
+    chatRoomId: String,
+    chatRoomKey: String,
+    gameConfig: GameConfig,
+    invitations: Vec<Invite>,
+    localMember: LobbyMember,
+    members: Vec<LobbyMember>,
+    partyId: String,
+    partyType: String,
+    restrictions: Vec<String>,
+    warnings: Vec<String>
 }
 
-/*
-{
-  "canStartActivity": true,
-  "chatRoomId": "6c116e58-c66d-411d-8377-c466b3346164",
-  "chatRoomKey": "6c116e58-c66d-411d-8377-c466b3346164",
-  "gameConfig": {
-    "allowablePremadeSizes": [
-      1,
-      2,
-      3,
-      4,
-      5
-    ],
-    "customLobbyName": "",
-    "customMutatorName": "",
-    "customRewardsDisabledReasons": [],
-    "customSpectatorPolicy": "NotAllowed",
-    "customSpectators": [],
-    "customTeam100": [],
-    "customTeam200": [],
-    "gameMode": "CLASSIC",
-    "isCustom": false,
-    "isLobbyFull": false,
-    "isTeamBuilderManaged": false,
-    "mapId": 11,
-    "maxHumanPlayers": 0,
-    "maxLobbySize": 5,
-    "maxTeamSize": 5,
-    "pickType": "",
-    "premadeSizeAllowed": true,
-    "queueId": 430,
-    "showPositionSelector": false
-  },
-  "invitations": [
-    {
-      "invitationId": "",
-      "state": "Accepted",
-      "timestamp": "0",
-      "toSummonerId": 88392922,
-      "toSummonerName": "Mackaron"
-    }
-  ],
-  "localMember": {
-    "allowedChangeActivity": true,
-    "allowedInviteOthers": true,
-    "allowedKickOthers": true,
-    "allowedStartActivity": true,
-    "allowedToggleInvite": true,
-    "autoFillEligible": false,
-    "autoFillProtectedForPromos": false,
-    "autoFillProtectedForSoloing": false,
-    "autoFillProtectedForStreaking": false,
-    "botChampionId": 0,
-    "botDifficulty": "NONE",
-    "botId": "",
-    "firstPositionPreference": "",
-    "isBot": false,
-    "isLeader": true,
-    "isSpectator": false,
-    "puuid": "010b2399-3d0f-597d-8b43-68e6187336dc",
-    "ready": true,
-    "secondPositionPreference": "",
-    "showGhostedBanner": false,
-    "summonerIconId": 29,
-    "summonerId": 88392922,
-    "summonerInternalName": "Mackaron",
-    "summonerLevel": 143,
-    "summonerName": "Mackaron",
-    "teamId": 0
-  },
-  "members": [
-    {
-      "allowedChangeActivity": true,
-      "allowedInviteOthers": true,
-      "allowedKickOthers": true,
-      "allowedStartActivity": true,
-      "allowedToggleInvite": true,
-      "autoFillEligible": false,
-      "autoFillProtectedForPromos": false,
-      "autoFillProtectedForSoloing": false,
-      "autoFillProtectedForStreaking": false,
-      "botChampionId": 0,
-      "botDifficulty": "NONE",
-      "botId": "",
-      "firstPositionPreference": "",
-      "isBot": false,
-      "isLeader": true,
-      "isSpectator": false,
-      "puuid": "010b2399-3d0f-597d-8b43-68e6187336dc",
-      "ready": true,
-      "secondPositionPreference": "",
-      "showGhostedBanner": false,
-      "summonerIconId": 29,
-      "summonerId": 88392922,
-      "summonerInternalName": "Mackaron",
-      "summonerLevel": 143,
-      "summonerName": "Mackaron",
-      "teamId": 0
-    }
-  ],
-  "partyId": "6c116e58-c66d-411d-8377-c466b3346164",
-  "partyType": "open",
-  "restrictions": [],
-  "warnings": []
+#[allow(non_snake_case)]
+struct GameConfig {
+    allowablePremadeSizes: Vec<u8>
+}
+
+struct LobbyMember {
+    allowedChangeActivity: bool,
+    allowedInviteOthers: bool,
+    allowedKickOthers: bool,
+    allowedStartActivity: bool,
+    allowedToggleInvite: bool,
+    autoFillEligible: bool,
+    autoFillProtectedForPromos: bool,
+    autoFillProtectedForSoloing: bool,
+    autoFillProtectedForStreaking: bool,
+    botChampionId: u32,
+    botDifficulty: String,
+    botId: u8,
+    firstPositionPreference: String,
+    isBot: bool,
+    isLeader: bool,
+    isSpectator: bool,
+    puuid: String,
+    ready: bool,
+    secondPositionPreference: String,
+    showGhostedBanner: bool,
+    summonerIconId: u32,
+    summonerId: u32,
+    summonerInternalName: String,
+    summonerLevel: u32,
+    summonerName: String,
+    teamId: u8
 }
 */
+
+#[allow(non_snake_case)]
+#[derive(Clone, Default, Debug, Serialize)]
+pub struct Invite {
+    invitationId: String,
+    state: &'static str,
+    timestamp: String,
+    pub toSummonerId: u32,
+    toSummonerName: String
+}
+
+#[allow(non_snake_case)]
+impl Invite {
+    pub fn new(toSummonerId: u32) -> Self {
+        Self {
+            state: "Requested",
+            toSummonerId,
+            ..Default::default()
+        }
+    }
+}
+
+pub fn post_lobby_invitations(http_connection: HttpConnection, invite: Invite) {
+    tokio::spawn(async move {
+        post_request(http_connection, "lol-lobby/v2/lobby/invitations", 
+            serde_json::to_string(&vec!(invite)).unwrap()).await.unwrap();
+        //eprintln!("{:?}", res);
+    });
+}

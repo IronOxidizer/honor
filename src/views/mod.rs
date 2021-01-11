@@ -43,10 +43,11 @@ impl<W: Widget<AppState>> Controller<AppState, W> for EventHandler {
 
                 // Subscribe to events
                 wamp_send(data.wamp_sink.clone(), MessageTypes::Subscribe, "OnJsonApiEvent_lol-chat_v1_friends");
+                wamp_send(data.wamp_sink.clone(), MessageTypes::Subscribe, "OnJsonApiEvent_lol-lobby_v2_lobby");
             },
             Event::Command(cmd) => {
                 if let Some(id) = cmd.get(POST_INVITE).and_then(SingleUse::take) {
-                    lobby::post_lobby_invitations(data.http_connection.clone(), id);
+                    lobby::post_lobby_invitations(data.http_connection.clone(), lobby::Invite::new(id));
                 } else if let Some(summoner) = cmd.get(SET_CURRENT_SUMMONER).and_then(SingleUse::take) {
                     data.current_summoner = summoner
                 } else if let Some(queues) = cmd.get(SET_QUEUES).and_then(SingleUse::take) {
