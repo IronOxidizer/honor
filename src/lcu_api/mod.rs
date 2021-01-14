@@ -44,9 +44,8 @@ pub const POST_INVITE: Selector<SingleUse<u64>> = Selector::new("POST_INVITE");
 pub const SET_CURRENT_SUMMONER: Selector<SingleUse<Arc<summoner::Summoner>>> = Selector::new("SET_CURRENT_SUMMONER");
 pub const SET_QUEUES: Selector<SingleUse<Arc<game_queues::Queues>>> = Selector::new("SET_QUEUES");
 pub const SET_FRIENDS: Selector<SingleUse<chat::Friends>> = Selector::new("SET_FRIENDS");
+pub const SET_LOBBY: Selector<SingleUse<Arc<lobby::Lobby>>> = Selector::new("UPDATE_LOBBY");
 pub const UPDATE_FRIEND: Selector<SingleUse<chat::Friend>> = Selector::new("UPDATE_FRIEND");
-pub const UPDATE_LOBBY: Selector<SingleUse<Arc<lobby::Lobby>>> = Selector::new("UPDATE_LOBBY");
-
 
 pub enum MessageTypes {
     // Welcome = 0,
@@ -187,12 +186,12 @@ pub async fn wamp_poll_spin(mut wamp_stream: WampStream, event_sink: ExtEventSin
                 match serde_json::from_value::<Option<lobby::Lobby>>(json[2]["data"].clone()) {
                     Ok(Some(lobby)) => {
                         event_sink.submit_command(
-                            UPDATE_LOBBY,
+                            SET_LOBBY,
                             SingleUse::new(Arc::new(lobby)),
                             Target::Auto).unwrap();
                     } Ok(None) => {
                         event_sink.submit_command(
-                            UPDATE_LOBBY,
+                            SET_LOBBY,
                             SingleUse::new(Arc::new(lobby::Lobby::default())),
                             Target::Auto).unwrap();
                     } Err(e) => eprintln!("\n\nUncaptured lobby event: {:?}", e)

@@ -40,6 +40,7 @@ impl<W: Widget<AppState>> Controller<AppState, W> for EventHandler {
                 summoner::get_current_summoner(data.http_connection.clone(), data.event_sink.clone());
                 game_queues::get_queues(data.http_connection.clone(), data.event_sink.clone());
                 chat::get_friends(data.http_connection.clone(), data.event_sink.clone());
+                lobby::get_lobby(data.http_connection.clone(), data.event_sink.clone());
 
                 // Subscribe to events
                 wamp_send(data.wamp_sink.clone(), MessageTypes::Subscribe, "OnJsonApiEvent_lol-chat_v1_friends");
@@ -54,10 +55,10 @@ impl<W: Widget<AppState>> Controller<AppState, W> for EventHandler {
                     data.queues = queues
                 } else if let Some(friends) = cmd.get(SET_FRIENDS).and_then(SingleUse::take) {
                     data.friends = friends
+                } else if let Some(lobby) = cmd.get(SET_LOBBY).and_then(SingleUse::take) {
+                    data.lobby = lobby
                 } else if let Some(friend) = cmd.get(UPDATE_FRIEND).and_then(SingleUse::take) {
                     data.friends.update(friend)
-                } else if let Some(lobby) = cmd.get(UPDATE_LOBBY).and_then(SingleUse::take) {
-                    data.lobby = lobby
                 }
             },
             _ => ()

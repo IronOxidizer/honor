@@ -84,3 +84,14 @@ pub fn post_lobby_invitations(http_connection: HttpConnection, invite: Invite) {
         //eprintln!("{:?}", res);
     });
 }
+
+pub fn get_lobby(http_connection: HttpConnection, event_sink: Arc<ExtEventSink>) {
+    tokio::spawn(async move {
+        let lobby = Arc::new(get_request::<Lobby>(http_connection, "lol-lobby/v2/lobby").await.unwrap());
+
+        event_sink.submit_command(
+            SET_LOBBY,
+            SingleUse::new(lobby),
+            Target::Auto).unwrap();
+    });
+}
