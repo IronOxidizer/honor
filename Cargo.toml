@@ -27,4 +27,4 @@ tokio-native-tls = { version = "0.1.0", default-features = false }
 tokio-tungstenite = { version = "0.11.0", default-features = false, features = ["connect", "tls"] }
 reqwest = { version = "0.10.10", default-features = false, features = ["native-tls", "json"] }
 
-druid = { version = "0.7.0", default-features = false, features = ["im", "serde"] }
+druid = { git = "git://github.com/linebender/druid.git", default-features = false, features = ["im", "serde"] }

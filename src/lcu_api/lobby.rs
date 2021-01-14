@@ -1,29 +1,33 @@
 use serde::Serialize;
+use druid::im::Vector;
 
 use super::*;
 
-/*
 #[allow(non_snake_case)]
+#[derive(Clone, Default, Debug, Deserialize, Data, Lens)]
 pub struct Lobby {
     canStartActivity: bool,
     chatRoomId: String,
     chatRoomKey: String,
     gameConfig: GameConfig,
-    invitations: Vec<Invite>,
+    //invitations: Vector<Invite>, // Causes a lifetime error
     localMember: LobbyMember,
-    members: Vec<LobbyMember>,
+    pub members: Vector<LobbyMember>,
     partyId: String,
     partyType: String,
-    restrictions: Vec<String>,
-    warnings: Vec<String>
+    restrictions: Vector<String>,
+    warnings: Vector<String>
 }
 
 #[allow(non_snake_case)]
+#[derive(Clone, Default, Debug, Deserialize, Data, Lens)]
 struct GameConfig {
-    allowablePremadeSizes: Vec<u8>
+    allowablePremadeSizes: Vector<u8>
 }
 
-struct LobbyMember {
+#[allow(non_snake_case)]
+#[derive(Clone, Default, Debug, Deserialize, Data, Lens)]
+pub struct LobbyMember {
     allowedChangeActivity: bool,
     allowedInviteOthers: bool,
     allowedKickOthers: bool,
@@ -35,26 +39,25 @@ struct LobbyMember {
     autoFillProtectedForStreaking: bool,
     botChampionId: u32,
     botDifficulty: String,
-    botId: u8,
-    firstPositionPreference: String,
+    botId: String,
+    pub firstPositionPreference: String,
     isBot: bool,
     isLeader: bool,
     isSpectator: bool,
     puuid: String,
     ready: bool,
-    secondPositionPreference: String,
+    pub secondPositionPreference: String,
     showGhostedBanner: bool,
     summonerIconId: u32,
     summonerId: u32,
     summonerInternalName: String,
     summonerLevel: u32,
-    summonerName: String,
+    pub summonerName: String,
     teamId: u8
 }
-*/
 
 #[allow(non_snake_case)]
-#[derive(Clone, Default, Debug, Serialize)]
+#[derive(Clone, Default, Debug, Serialize, Data, Lens)]
 pub struct Invite {
     invitationId: String,
     state: &'static str,

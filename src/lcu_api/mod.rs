@@ -41,10 +41,11 @@ pub struct HttpConnection {
 }
 
 pub const POST_INVITE: Selector<SingleUse<u32>> = Selector::new("POST_INVITE");
-pub const UPDATE_FRIEND: Selector<SingleUse<chat::Friend>> = Selector::new("UPDATE_FRIEND");
 pub const SET_CURRENT_SUMMONER: Selector<SingleUse<Arc<summoner::Summoner>>> = Selector::new("SET_CURRENT_SUMMONER");
 pub const SET_QUEUES: Selector<SingleUse<Arc<game_queues::Queues>>> = Selector::new("SET_QUEUES");
 pub const SET_FRIENDS: Selector<SingleUse<chat::Friends>> = Selector::new("SET_FRIENDS");
+pub const UPDATE_FRIEND: Selector<SingleUse<chat::Friend>> = Selector::new("UPDATE_FRIEND");
+pub const UPDATE_LOBBY: Selector<SingleUse<Arc<lobby::Lobby>>> = Selector::new("UPDATE_LOBBY");
 
 
 pub enum MessageTypes {
@@ -174,14 +175,28 @@ pub async fn wamp_poll_spin(mut wamp_stream: WampStream, event_sink: ExtEventSin
         
         match event {
             "OnJsonApiEvent_lol-chat_v1_friends" => {
-                if let Ok(_friend) = serde_json::from_value::<chat::Friend>(json[2]["data"].clone()) {
-                    event_sink.submit_command(
-                        UPDATE_FRIEND,
-                        SingleUse::new(_friend),
-                        Target::Auto).unwrap();
+                match serde_json::from_value::<chat::Friend>(json[2]["data"].clone()) {
+                    Ok(friend) => {
+                        event_sink.submit_command(
+                            UPDATE_FRIEND,
+                            SingleUse::new(friend),
+                            Target::Auto).unwrap();
+                    } Err(e) => eprintln!("\n\nUncaptured friend event: {:?}", e)
                 }
             }, "OnJsonApiEvent_lol-lobby_v2_lobby" => {
-                eprintln!("\n\nLobby event: {:?}", json[2]["data"].clone())
+                match serde_json::from_value::<Option<lobby::Lobby>>(json[2]["data"].clone()) {
+                    Ok(Some(lobby)) => {
+                        event_sink.submit_command(
+                            UPDATE_LOBBY,
+                            SingleUse::new(Arc::new(lobby)),
+                            Target::Auto).unwrap();
+                    } Ok(None) => {
+                        event_sink.submit_command(
+                            UPDATE_LOBBY,
+                            SingleUse::new(Arc::new(lobby::Lobby::default())),
+                            Target::Auto).unwrap();
+                    } Err(e) => eprintln!("\n\nUncaptured lobby event: {:?}", e)
+                }
             }, _ => eprintln!("Event no match: {}", event)
         }
     }

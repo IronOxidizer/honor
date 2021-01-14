@@ -1,26 +1,14 @@
 use std::sync::Arc;
 use druid::{Color, KeyOrValue, LensExt, RenderContext, Widget,
     WidgetExt, Env, SingleUse, Target,
-    im::{Vector}, // All im types are wrapped with Arc thus are cheap to clone
-    widget::{Flex, Label, List, Button, Container,
+    im::Vector, // All im types are wrapped with Arc thus are cheap to clone
+    widget::{Flex, Label, List, Button, Container, Either,
         Scroll, TextBox, Painter, CrossAxisAlignment}};
 
 use super::*;
 use super::super::*;
 
 pub fn view_lobby() -> impl Widget<AppState> {
-    fn summoner_card(summoner_name: &'static str, primary_role: &'static str, secondary_role: &'static str) -> impl Widget<AppState> {
-        Container::new(
-            Flex::column()
-                .with_child(Label::new(summoner_name))
-                .with_child(Label::new(primary_role))
-                .with_child(Label::new(secondary_role))
-                .padding(4.0)
-        ).background(Color::grey8(58))
-            .rounded(8.0)
-            .padding((4.0, 8.0))
-    }
-
     fn queue_list() -> impl Widget<Vector<game_queues::Queue>> {
         List::new(|| {
             Label::new(|queue: &game_queues::Queue, _env: &Env | {
@@ -120,26 +108,47 @@ pub fn view_lobby() -> impl Widget<AppState> {
             .lens(AppState::friends)
     ).vertical()
         .expand();
-    
 
     let top_row = Flex::row()
         .with_flex_child(queue_lists, 1.0)
         .with_flex_child(notif_chat_col, 2.0)
         .with_flex_child(friend_lists, 1.0); //.debug_paint_layout();
 
-    // Use druid::either, when not in lobby show "not in lobby"
-    // Consider exclusively using subscribe event for lobby
-    let summoner_cards = Scroll::new(
-        Flex::row()
-            .with_child(summoner_card("Player1", "Top", "Jungle"))
-            .with_child(summoner_card("PlayerWithAReallyLongName2", "Jungle", "Middle"))
-            .with_child(summoner_card("Player3", "Support", "Middle"))
-            .with_child(summoner_card("Player4", "Bottom", "Middle"))
-            .with_child(summoner_card("PlayerWithALongName5", "Middle", "Bottom"))
-            .with_child(summoner_card("PlayerWithALongName6", "Middle", "Bottom"))
-    ); //.debug_paint_layout().boxed();
+    let summoner_cards = List::new(|| {
+        Container::new(
+            Flex::column()
+                .with_child(Label::new(|data: &String, _env: &Env| data.clone())
+                    .lens(lobby::LobbyMember::summonerName))
+                .with_child(Label::new(|data: &String, _env: &Env| data.clone())
+                    .lens(lobby::LobbyMember::firstPositionPreference))
+                .with_child(Label::new(|data: &String, _env: &Env| data.clone())
+                    .lens(lobby::LobbyMember::secondPositionPreference))
+               .padding(4.0)
+               .background(Painter::new(|ctx, _data, _env| {
+                   let bounds = ctx.size().to_rect();
+                   if ctx.is_active() {
+                       ctx.fill(bounds, &Color::grey8(32));
+                   } else if ctx.is_hot() {
+                       ctx.fill(bounds, &Color::grey8(64))
+                   } else {
+                    ctx.fill(bounds, &Color::grey8(58))
+                }
+               }))
+               .rounded(8.0)
+               .on_click(|_ctx, data, _env| eprintln!("{:?}", data))
+        )
+            .padding((4.0, 8.0))
+
+    })
+        .horizontal()
+        .lens(lobby::Lobby::members.in_arc());//.debug_paint_layout();
+
+    let bottom_row = Either::new(|data: &Arc<Lobby>, _env| data.members.len() > 0,
+        summoner_cards,
+        Label::new("Currently not in lobby")
+    ).lens(AppState::lobby);
 
     Flex::column()
         .with_flex_child(top_row, 1.0)
-        .with_child(summoner_cards)
+        .with_child(bottom_row)
 }

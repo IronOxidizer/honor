@@ -4,6 +4,7 @@
 use std::sync::Arc;
 use anyhow::Result;
 use futures::StreamExt;
+use lobby::Lobby;
 use tokio::sync::Mutex;
 use druid::{AppLauncher, WindowDesc, Data, Lens, ExtEventSink};
 
@@ -59,6 +60,7 @@ pub struct AppState {
     pub view: AppView, // Implements copy, faster to not use Arc
     pub current_summoner: Arc<summoner::Summoner>,
     pub queues: Arc<game_queues::Queues>,
+    pub lobby: Arc<Lobby>,
     pub friends: chat::Friends, // Don't wrap in Arc because each individual friend state might change because of websocket events
     pub chat_contents: String
 }
@@ -72,6 +74,7 @@ impl AppState {
             view: Default::default(),
             current_summoner: Default::default(),
             queues: Default::default(),
+            lobby: Default::default(),
             friends: Default::default(),
             chat_contents: Default::default()
         }
