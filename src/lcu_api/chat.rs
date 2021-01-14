@@ -80,7 +80,7 @@ pub struct Friend {
     // puuid: String,
     // statusMessage: String,
     // summary: String,
-    pub summonerId: u32,
+    pub summonerId: u64,
     // time: u64
 }
 

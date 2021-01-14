@@ -21,30 +21,30 @@ impl From<_Summoner> for Summoner {
 #[allow(non_snake_case)]
 #[derive(Clone, Default, Debug, Deserialize)]
 struct _Summoner {
-    accountId: u32,
+    // accountId: u32,
     displayName: String,
-    internalName: String,
-    nameChangeFlag: bool,
-    percentCompleteForNextLevel: u8,
-    profileIconId: u32,
-    puuid: String,
-    rerollPoints: _RerollPoints,
-    summonerId:u32,
-    summonerLevel: u32,
-    unnamed: bool,
-    xpSinceLastLevel: u32,
-    xpUntilNextLevel: u32
+    // internalName: String,
+    // nameChangeFlag: bool,
+    // percentCompleteForNextLevel: u8,
+    // profileIconId: u32,
+    // puuid: String,
+    // rerollPoints: _RerollPoints,
+    summonerId: u64,
+    // summonerLevel: u32,
+    // unnamed: bool,
+    // xpSinceLastLevel: u32,
+    // xpUntilNextLevel: u32
 }
 
-#[allow(non_snake_case)]
-#[derive(Clone, Default, Debug, Deserialize)]
-struct _RerollPoints {
-    currentPoints: u32,
-    maxRolls: u32,
-    numberOfRolls: u32,
-    pointsCostToRoll: u32,
-    pointsToReroll: u32
-}
+// #[allow(non_snake_case)]
+// #[derive(Clone, Default, Debug, Deserialize)]
+// struct _RerollPoints {
+//     currentPoints: u32,
+//     maxRolls: u32,
+//     numberOfRolls: u32,
+//     pointsCostToRoll: u32,
+//     pointsToReroll: u32
+// }
 
 
 pub fn get_current_summoner(http_connection: HttpConnection, event_sink: Arc<ExtEventSink>) {

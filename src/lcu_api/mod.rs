@@ -40,7 +40,7 @@ pub struct HttpConnection {
     pub token: String
 }
 
-pub const POST_INVITE: Selector<SingleUse<u32>> = Selector::new("POST_INVITE");
+pub const POST_INVITE: Selector<SingleUse<u64>> = Selector::new("POST_INVITE");
 pub const SET_CURRENT_SUMMONER: Selector<SingleUse<Arc<summoner::Summoner>>> = Selector::new("SET_CURRENT_SUMMONER");
 pub const SET_QUEUES: Selector<SingleUse<Arc<game_queues::Queues>>> = Selector::new("SET_QUEUES");
 pub const SET_FRIENDS: Selector<SingleUse<chat::Friends>> = Selector::new("SET_FRIENDS");
@@ -181,7 +181,7 @@ pub async fn wamp_poll_spin(mut wamp_stream: WampStream, event_sink: ExtEventSin
                             UPDATE_FRIEND,
                             SingleUse::new(friend),
                             Target::Auto).unwrap();
-                    } Err(e) => eprintln!("\n\nUncaptured friend event: {:?}", e)
+                    } Err(e) => eprintln!("\n\nUncaptured friend event: {:?}\n{:?}", e, json[2]["data"].clone())
                 }
             }, "OnJsonApiEvent_lol-lobby_v2_lobby" => {
                 match serde_json::from_value::<Option<lobby::Lobby>>(json[2]["data"].clone()) {
