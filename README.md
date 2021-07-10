@@ -1,4 +1,7 @@
 # Honor
+
+![demo](https://user-images.githubusercontent.com/60191958/106922789-66976180-66db-11eb-8b0b-98d92d7d539d.png)
+
 A fast and stable League of Legends matchmaking client built with Rust 
 
 *"Honor is the **Rust** on a dull blade"* ~ Sivir
@@ -20,13 +23,13 @@ A fast and stable League of Legends matchmaking client built with Rust
 
 Honor is licensed under AGPLv3+
 
-~~Honor has been officially audited and registered under Riot's community development program. As such, it's been verified to operate within Riot's terms and conditions at no risk to its users.~~
-
-Honor's registration for Riot's community development program is currently pending.
+Honor has been officially audited and registered under Riot's community development program. As such, it's been verified to operate within Riot's terms and conditions at no risk to its users.
 
 Honor isn't endorsed by Riot Games and doesn't reflect the views or opinions of Riot Games or anyone officially involved in producing or managing Riot Games properties. Riot Games, and all associated properties are trademarks or registered trademarks of Riot Games, Inc.
 
 Honor was created under Riot Games' "Legal Jibber Jabber" policy using assets owned by Riot Games.  Riot Games does not endorse or sponsor this project.
+
+![honor-verification](https://user-images.githubusercontent.com/60191958/106815793-5c755480-6642-11eb-8fa9-d5e30c9c3155.png)
 
 ## TODO
 
