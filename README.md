@@ -32,7 +32,8 @@ Honor was created under Riot Games' "Legal Jibber Jabber" policy using assets ow
 
 - Switch to tokio single threaded (features = rt-core instead of rt-threaded)
 	- Will enable us to use Rc instead of Arc and druid::im-rc instead of druid::im
+    - Requires tokio to be running on a separate thread from UI thread (2 threaded application)
 - Loop reconnect on disconnect with reconnecting modal
-    - On first occurence, don't prompt user, do it automatically for automatic connecting on first launch
+    - On first occurrence, don't prompt user, do it automatically for automatic connecting on first launch
     - kill ux
 	- Add restart LCU button to reconnect modal
